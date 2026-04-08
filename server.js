@@ -208,10 +208,11 @@ app.get('/api/private/messages', (req, res) => {
 app.get('/api/version', (req, res) => {
   try {
     const versionFile = path.join(__dirname, 'version.json');
-    const data = JSON.parse(fs.readFileSync(versionFile, 'utf8'));
+    const raw = fs.readFileSync(versionFile, 'utf8').trim();
+    const data = JSON.parse(raw);
     res.json(data);
   } catch (e) {
-    res.status(500).json({ error: 'version.json not found' });
+    res.status(500).json({ error: 'version.json error: ' + e.message, dirname: __dirname });
   }
 });
 
