@@ -1,8 +1,8 @@
-const express = require('express');                                                                                             const cors = require('cors');
-  const cron = require('node-cron');                                                                                              const fs = require('fs');
-  const path = require('path');
-  const db = require('./db');
-  const { generateWeeklyMissions, getWeekId } = require('./missions');
+  const express = require('express');
+  const cors = require('cors');
+  const cron = require('node-cron');
+  const fs = require('fs');                                                                                                       const path = require('path');
+  const db = require('./db');                                                                                                     const { generateWeeklyMissions, getWeekId } = require('./missions');
 
   const app = express();
   const PORT = process.env.PORT || 3000;
@@ -182,10 +182,19 @@ const express = require('express');                                             
 
   app.get('/api/download/:filename', (req, res) => {
     const filePath = path.join(__dirname, 'updates', req.params.filename);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'file not found' });
+    if (fs.existsSync(filePath)) {
+      return res.download(filePath);
     }
-    res.download(filePath);
+    try {
+      const versionFile = path.join(__dirname, 'version.json');
+      let raw = fs.readFileSync(versionFile, 'utf8');
+      raw = raw.replace(/[\x00-\x1F\x7F]/g, ' ').replace(/\s+/g, ' ').trim();
+      const data = JSON.parse(raw);
+      if (data.driveFileId) {
+        return res.redirect('https://drive.google.com/uc?export=download&id=' + data.driveFileId + '&confirm=t');
+      }
+    } catch (e) {}
+    res.status(404).json({ error: 'file not found' });
   });
 
   app.listen(PORT, '0.0.0.0', () => {
