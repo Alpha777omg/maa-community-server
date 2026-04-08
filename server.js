@@ -24,12 +24,18 @@ cron.schedule('0 0 * * 1', () => {
 
 // POST /api/heartbeat
 app.post('/api/heartbeat', (req, res) => {
-  const { uuid } = req.body;
+  const { uuid, playerName } = req.body;
   if (!uuid) return res.status(400).json({ error: 'uuid required' });
 
   db.upsertPlayer(uuid);
+  db.updateProfileSeen(uuid);
+  // Auto-register profile if not exists
+  if (playerName && !db.getProfile(uuid)) {
+    db.registerProfile(uuid, playerName.substring(0, 30));
+  }
+  const profile = db.getProfile(uuid);
   const count = db.countOnline(ONLINE_TIMEOUT);
-  res.json({ online_count: count, server_time: Math.floor(Date.now() / 1000) });
+  res.json({ online_count: count, server_time: Math.floor(Date.now() / 1000), profile });
 });
 
 // GET /api/missions
@@ -116,6 +122,83 @@ app.post('/api/chat/send', (req, res) => {
 app.get('/api/chat/messages', (req, res) => {
   const sinceId = parseInt(req.query.since_id) || 0;
   const messages = db.getChatMessages(sinceId);
+  res.json({ messages });
+});
+
+// === PROFILE & FRIENDS ENDPOINTS ===
+
+// POST /api/profile/register
+app.post('/api/profile/register', (req, res) => {
+  const { uuid, name } = req.body;
+  if (!uuid || !name) return res.status(400).json({ error: 'uuid, name required' });
+  const profile = db.registerProfile(uuid, name.substring(0, 30));
+  res.json({ success: true, profile });
+});
+
+// GET /api/profile/search
+app.get('/api/profile/search', (req, res) => {
+  const { name } = req.query;
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const results = db.searchProfiles(name);
+  res.json({ results });
+});
+
+// POST /api/friends/add
+app.post('/api/friends/add', (req, res) => {
+  const { uuid, target_uuid } = req.body;
+  if (!uuid || !target_uuid) return res.status(400).json({ error: 'uuid, target_uuid required' });
+  const ok = db.addFriendRequest(uuid, target_uuid);
+  res.json({ success: ok });
+});
+
+// GET /api/friends/list
+app.get('/api/friends/list', (req, res) => {
+  const { uuid } = req.query;
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  const list = db.getFriendsList(uuid);
+  res.json(list);
+});
+
+// POST /api/friends/accept
+app.post('/api/friends/accept', (req, res) => {
+  const { uuid, request_from } = req.body;
+  if (!uuid || !request_from) return res.status(400).json({ error: 'uuid, request_from required' });
+  const ok = db.acceptFriend(uuid, request_from);
+  res.json({ success: ok });
+});
+
+// POST /api/friends/reject
+app.post('/api/friends/reject', (req, res) => {
+  const { uuid, request_from } = req.body;
+  if (!uuid || !request_from) return res.status(400).json({ error: 'uuid, request_from required' });
+  const ok = db.rejectFriend(uuid, request_from);
+  res.json({ success: ok });
+});
+
+// POST /api/friends/remove
+app.post('/api/friends/remove', (req, res) => {
+  const { uuid, target_uuid } = req.body;
+  if (!uuid || !target_uuid) return res.status(400).json({ error: 'uuid, target_uuid required' });
+  const ok = db.removeFriend(uuid, target_uuid);
+  res.json({ success: ok });
+});
+
+// POST /api/private/send
+app.post('/api/private/send', (req, res) => {
+  const { uuid, target_uuid, message } = req.body;
+  if (!uuid || !target_uuid || !message) return res.status(400).json({ error: 'uuid, target_uuid, message required' });
+  const clean = message.replace(/[<>]/g, '').trim();
+  if (clean.length === 0) return res.status(400).json({ error: 'empty message' });
+  const msg = db.addPrivateMessage(uuid, target_uuid, clean);
+  if (!msg) return res.status(400).json({ error: 'not friends' });
+  res.json({ success: true, message: msg });
+});
+
+// GET /api/private/messages
+app.get('/api/private/messages', (req, res) => {
+  const { uuid, target, since_id } = req.query;
+  if (!uuid || !target) return res.status(400).json({ error: 'uuid, target required' });
+  const messages = db.getPrivateMessages(uuid, target, parseInt(since_id) || 0);
   res.json({ messages });
 });
 
