@@ -1,4 +1,4 @@
-  const express = require('express');
+const express = require('express');
   const cors = require('cors');
   const cron = require('node-cron');
   const fs = require('fs');                                                                                                       const path = require('path');
@@ -190,8 +190,12 @@
       let raw = fs.readFileSync(versionFile, 'utf8');
       raw = raw.replace(/[\x00-\x1F\x7F]/g, ' ').replace(/\s+/g, ' ').trim();
       const data = JSON.parse(raw);
-      if (data.driveFileId) {
-        return res.redirect('https://drive.google.com/uc?export=download&id=' + data.driveFileId + '&confirm=t');
+      if (data.downloadUrl) {
+        return res.redirect(data.downloadUrl);
+      }
+      if (data.version) {
+        return res.redirect('https://github.com/Alpha777omg/maa-community-server/releases/download/v' + data.version + '/' +
+  req.params.filename);
       }
     } catch (e) {}
     res.status(404).json({ error: 'file not found' });
