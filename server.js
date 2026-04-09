@@ -203,21 +203,22 @@ app.get('/api/private/messages', (req, res) => {
 });
 
 // === LAUNCHER UPDATE ENDPOINTS ===
-  app.post('/api/coop/share-mission', (req, res) => { const { uuid, missionData } = req.body; if (!uuid || !missionData)
-   return res.status(400).json({}); db.shareMission(uuid, missionData); res.json({ success: true }); });
-  app.get('/api/coop/get-mission', (req, res) => { const { uuid, friend } = req.query; if (!uuid || !friend) return
-  res.json({}); if (!db.areFriends(uuid, friend)) return res.json({}); const c = db.getCoopMission(friend); if (!c ||
-  !c.missionData) return res.json({ missionData: null, locks: {} }); res.json({ missionData: c.missionData, locks:
-  c.locks || {} }); });
-  app.post('/api/coop/lock-battle', (req, res) => { const { uuid, friend, eventId } = req.body; if (!uuid || !friend ||
-  !eventId) return res.json({}); if (!db.areFriends(uuid, friend)) return res.json({}); const p = db.getProfile(uuid);
-  res.json({ success: db.lockBattle(friend, eventId, uuid, p ? p.name : 'A') }); });
-  app.post('/api/coop/unlock-battle', (req, res) => { const { uuid, friend, eventId } = req.body; if (!uuid || !friend
-  || !eventId) return res.json({}); res.json({ success: db.unlockBattle(friend, eventId, uuid) }); });
-  app.post('/api/coop/complete-battle', (req, res) => { const { uuid, friend, eventId, score } = req.body; if (!uuid ||
-  !friend || !eventId) return res.json({}); res.json(db.completeBattle(friend, eventId, uuid, score || 1)); });
-  app.get('/api/coop/battle-status', (req, res) => { const { friend } = req.query; if (!friend) return res.json({});
-  res.json({ locks: db.getBattleStatus(friend) }); });
+  app.post('/api/coop/share-mission', (req, res) => { const b = req.body; if (!b.uuid || !b.missionData) { return
+  res.json({}); } db.shareMission(b.uuid, b.missionData); return res.json({ success: true }); });
+  app.get('/api/coop/get-mission', (req, res) => { const q = req.query; if (!q.uuid || !q.friend) { return res.json({
+  missionData: null }); } const c = db.getCoopMission(q.friend); if (!c || !c.missionData) { return res.json({
+  missionData: null }); } return res.json({ missionData: c.missionData, locks: c.locks || {} }); });
+  app.post('/api/coop/lock-battle', (req, res) => { const b = req.body; if (!b.uuid || !b.friend || !b.eventId) { return
+   res.json({ success: false }); } const p = db.getProfile(b.uuid); const ok = db.lockBattle(b.friend, b.eventId,
+  b.uuid, p ? p.name : 'A'); return res.json({ success: ok }); });
+  app.post('/api/coop/unlock-battle', (req, res) => { const b = req.body; if (!b.uuid || !b.friend || !b.eventId) {
+  return res.json({ success: false }); } const ok = db.unlockBattle(b.friend, b.eventId, b.uuid); return res.json({
+  success: ok }); });
+  app.post('/api/coop/complete-battle', (req, res) => { const b = req.body; if (!b.uuid || !b.friend || !b.eventId) {
+  return res.json({ success: false }); } const r = db.completeBattle(b.friend, b.eventId, b.uuid, b.score || 1); return
+  res.json(r); });
+  app.get('/api/coop/battle-status', (req, res) => { if (!req.query.friend) { return res.json({ locks: {} }); } return
+  res.json({ locks: db.getBattleStatus(req.query.friend) }); });
 
 // GET /api/version
 app.get('/api/version', (req, res) => {
