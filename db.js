@@ -7,12 +7,15 @@ const MAX_CHAT_MESSAGES = 100;
 
 const MAX_PRIVATE_MESSAGES = 50;
 
+const LOCK_TIMEOUT = 1800;
+
 const DEFAULT_DATA = {
   players: {},
   missions: {},
   contributions: {},
   chat: [],
   profiles: {},
+  coop: {},
   friends: [],
   private_messages: []
 };
@@ -278,5 +281,85 @@ module.exports = {
       ((m.from === uuid && m.to === targetUuid) || (m.from === targetUuid && m.to === uuid))
       && m.id > sinceId
     ).slice(-50);
+  },
+
+  // === CO-OP ===
+  areFriends(uuid1, uuid2) {
+    if (!data.friends) return false;
+    return !!data.friends.find(f =>
+      ((f.from === uuid1 && f.to === uuid2) || (f.from === uuid2 && f.to === uuid1))
+      && f.status === 'accepted');
+  },
+
+  shareMission(uuid, missionData) {
+    if (!data.coop) data.coop = {};
+    if (!data.coop[uuid]) data.coop[uuid] = { missionData: null, locks: {}, lastUpdated: 0 };
+    data.coop[uuid].missionData = missionData;
+    data.coop[uuid].lastUpdated = Math.floor(Date.now() / 1000);
+    save(data);
+  },
+
+  getCoopMission(ownerUuid) {
+    if (!data.coop) data.coop = {};
+    this.cleanStaleLocks();
+    return data.coop[ownerUuid] || null;
+  },
+
+  lockBattle(ownerUuid, eventId, helperUuid, helperName) {
+    if (!data.coop || !data.coop[ownerUuid]) return false;
+    const entry = data.coop[ownerUuid];
+    if (!entry.locks) entry.locks = {};
+    if (entry.locks[eventId]) return false;
+    const evt = entry.missionData?.events?.find(e => e.eventId === eventId);
+    if (!evt || evt.score > 0) return false;
+    entry.locks[eventId] = { lockedBy: helperUuid, lockedAt: Math.floor(Date.now() / 1000), playerName: helperName };
+    save(data);
+    return true;
+  },
+
+  unlockBattle(ownerUuid, eventId, helperUuid) {
+    if (!data.coop || !data.coop[ownerUuid]) return false;
+    const entry = data.coop[ownerUuid];
+    if (!entry.locks || !entry.locks[eventId]) return false;
+    if (entry.locks[eventId].lockedBy !== helperUuid) return false;
+    delete entry.locks[eventId];
+    save(data);
+    return true;
+  },
+
+  completeBattle(ownerUuid, eventId, helperUuid, score) {
+    if (!data.coop || !data.coop[ownerUuid]) return { success: false, error: 'no coop data' };
+    const entry = data.coop[ownerUuid];
+    if (!entry.locks || !entry.locks[eventId]) return { success: false, error: 'not locked' };
+    if (entry.locks[eventId].lockedBy !== helperUuid) return { success: false, error: 'wrong helper' };
+    const evt = entry.missionData?.events?.find(e => e.eventId === eventId);
+    if (!evt) return { success: false, error: 'event not found' };
+    evt.score = score;
+    delete entry.locks[eventId];
+    save(data);
+    return { success: true, xpReward: 100 };
+  },
+
+  getBattleStatus(ownerUuid) {
+    if (!data.coop || !data.coop[ownerUuid]) return {};
+    this.cleanStaleLocks();
+    return data.coop[ownerUuid].locks || {};
+  },
+
+  cleanStaleLocks() {
+    if (!data.coop) return;
+    const now = Math.floor(Date.now() / 1000);
+    let changed = false;
+    for (const uuid of Object.keys(data.coop)) {
+      const entry = data.coop[uuid];
+      if (!entry.locks) continue;
+      for (const eventId of Object.keys(entry.locks)) {
+        if (now - entry.locks[eventId].lockedAt > LOCK_TIMEOUT) {
+          delete entry.locks[eventId];
+          changed = true;
+        }
+      }
+    }
+    if (changed) save(data);
   }
 };
