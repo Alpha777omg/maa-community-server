@@ -97,10 +97,12 @@ app.get('/api/status', (req, res) => {
   if (!uuid || !week_id) return res.status(400).json({ error: 'uuid, week_id required' });
 
   const contribs = db.getContributions(uuid, week_id);
+  const missions = db.getMissions(week_id);
   const claims = [];
-  for (let s = 0; s < 4; s++) {
-    const c = contribs[s] || { contributed: 0, claimed: false };
-    claims.push({ slot: s, contributed: c.contributed, claimed: c.claimed ? 1 : 0 });
+  // One claim entry per mission slot that exists this week (handles any mission count).
+  for (const m of missions) {
+    const c = contribs[m.slot] || { contributed: 0, claimed: false };
+    claims.push({ slot: m.slot, contributed: c.contributed, claimed: c.claimed ? 1 : 0 });
   }
   res.json({ claims });
 });
