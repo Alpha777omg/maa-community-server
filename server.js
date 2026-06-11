@@ -204,6 +204,19 @@ app.get('/api/private/messages', (req, res) => {
   res.json({ messages });
 });
 
+// === PvP TEAM REGISTRY ===
+
+// POST /api/pvp/sync — register my PvP team + get a batch of opponents.
+// Body: { uuid, team (PvpTeamData JSON string), level, tier }
+// Response: { teams: [ "<PvpTeamData JSON>", ... ] }
+app.post('/api/pvp/sync', (req, res) => {
+  const { uuid, team, level, tier } = req.body;
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  if (team) db.upsertPvpTeam(uuid, team, level || 0, tier || 0);
+  const teams = db.getPvpOpponents(uuid, level || 0, tier || 0, 30);
+  res.json({ teams });
+});
+
 // === LAUNCHER UPDATE ENDPOINTS ===
   app.post('/api/coop/share-mission', (req, res) => { const b = req.body; if (!b.uuid || !b.missionData) { return
   res.json({}); } db.shareMission(b.uuid, b.missionData); return res.json({ success: true }); });

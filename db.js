@@ -15,8 +15,11 @@
     profiles: {},
     coop: {},
     friends: [],
-    private_messages: []
+    private_messages: [],
+    pvp_teams: {}
   };
+
+  const MAX_PVP_TEAMS = 2000;
 
   function load() {
     try {
@@ -348,5 +351,45 @@
         }
       }
       if (changed) save(data);
+    },
+
+    // === PvP team registry (shared opponent pool) ===
+    // Stores each player's PvP team snapshot (as an opaque JSON string built by the
+    // client) keyed by uuid. The client keeps its own durable local pool; this server
+    // copy is just a relay that seeds clients with real teams they never met live, so
+    // it's fine if Render's ephemeral disk wipes it — it refills as players re-sync.
+    upsertPvpTeam(uuid, team, level, tier) {
+      if (!data.pvp_teams) data.pvp_teams = {};
+      data.pvp_teams[uuid] = {
+        team,
+        level: level || 0,
+        tier: tier || 0,
+        updated: Math.floor(Date.now() / 1000)
+      };
+      // Light cap: drop the oldest entries if the registry grows too large.
+      const ids = Object.keys(data.pvp_teams);
+      if (ids.length > MAX_PVP_TEAMS) {
+        ids.sort((a, b) => (data.pvp_teams[a].updated || 0) - (data.pvp_teams[b].updated || 0));
+        for (let i = 0; i < ids.length - MAX_PVP_TEAMS; i++) delete data.pvp_teams[ids[i]];
+      }
+      save(data);
+    },
+
+    // Returns up to `limit` OTHER players' team JSON strings, preferring the closest
+    // agent level, then shuffled for variety. The client does its own fair selection.
+    getPvpOpponents(uuid, level, tier, limit) {
+      if (!data.pvp_teams) data.pvp_teams = {};
+      const others = [];
+      for (const [id, e] of Object.entries(data.pvp_teams)) {
+        if (id === uuid || !e || !e.team) continue;
+        others.push(e);
+      }
+      others.sort((a, b) => Math.abs((a.level || 0) - level) - Math.abs((b.level || 0) - level));
+      const pool = others.slice(0, Math.max(limit * 3, limit));
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      }
+      return pool.slice(0, limit).map(e => e.team);
     }
   };
