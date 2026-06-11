@@ -235,6 +235,15 @@ app.post('/api/pvp/sync', (req, res) => {
   app.get('/api/coop/battle-status', (req, res) => { if (!req.query.friend) { return res.json({ locks: {} }); } return
   res.json({ locks: db.getBattleStatus(req.query.friend) }); });
 
+// GET /api/coop/list?uuid=<me>&limit=30  -> { requests: [ {summary}, ... ] }
+// Public help board: every OTHER agent currently asking for help.
+app.get('/api/coop/list', (req, res) => {
+  const uuid = req.query.uuid || '';
+  let limit = parseInt(req.query.limit, 10) || 30;
+  if (limit > 50) limit = 50;
+  res.json({ requests: db.getOpenCoopRequests(uuid, limit) });
+});
+
 // GET /api/version
 app.get('/api/version', (req, res) => {
   try {

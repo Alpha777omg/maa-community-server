@@ -6,6 +6,7 @@
   const MAX_CHAT_MESSAGES = 100;                                                                                        
   const MAX_PRIVATE_MESSAGES = 50;                                                                                      
   const LOCK_TIMEOUT = 1800;
+  const COOP_REQUEST_TTL = 10800; // 3h: stale help requests drop off the public board
 
   const DEFAULT_DATA = {
     players: {},
@@ -351,6 +352,46 @@
         }
       }
       if (changed) save(data);
+    },
+
+    // Public help board: returns a compact summary of every OTHER player's open
+    // coop request (one that still has at least one un-completed helpable battle and
+    // hasn't gone stale). The owner posts `missionData` via shareMission; here we only
+    // expose what the board needs to render a card (no full events payload).
+    getOpenCoopRequests(excludeUuid, limit) {
+      if (!data.coop) data.coop = {};
+      this.cleanStaleLocks();
+      const now = Math.floor(Date.now() / 1000);
+      const out = [];
+      for (const [uuid, entry] of Object.entries(data.coop)) {
+        if (uuid === excludeUuid) continue;
+        const md = entry && entry.missionData;
+        if (!md || !Array.isArray(md.events) || md.events.length === 0) continue;
+        if (now - (entry.lastUpdated || 0) > COOP_REQUEST_TTL) continue;
+        const total = md.events.length;
+        const completed = md.events.filter(e => e && e.score > 0).length;
+        if (completed >= total) continue; // fully helped, nothing left to do
+        const activeHelpers = entry.locks ? Object.keys(entry.locks).length : 0;
+        out.push({
+          uuid,
+          ownerName: md.ownerName || 'Agent',
+          ownerLevel: md.ownerLevel || 0,
+          season: md.season || 0,
+          chapter: md.chapter || 0,
+          mission: md.mission || 0,
+          missionId: md.missionId || '',
+          location: md.location || '',
+          dispName: md.dispName || '',
+          imageAssetId: md.imageAssetId || '',
+          totalBattles: total,
+          completedBattles: completed,
+          activeHelpers,
+          full: activeHelpers >= 2,
+          updated: entry.lastUpdated || 0
+        });
+      }
+      out.sort((a, b) => (b.updated || 0) - (a.updated || 0));
+      return out.slice(0, limit);
     },
 
     // === PvP team registry (shared opponent pool) ===
