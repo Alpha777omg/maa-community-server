@@ -337,6 +337,15 @@
       return data.coop[ownerUuid].locks || {};
     },
 
+    // EventIds of this owner's battles already cleared (by a helper or the owner).
+    // Polled so completed battles disappear live for everyone viewing the map.
+    getCompletedEvents(ownerUuid) {
+      if (!data.coop || !data.coop[ownerUuid]) return [];
+      const md = data.coop[ownerUuid].missionData;
+      if (!md || !Array.isArray(md.events)) return [];
+      return md.events.filter((e) => e && e.score > 0 && e.eventId).map((e) => e.eventId);
+    },
+
     // Locks as a JSON-array (Unity JsonUtility can't parse the eventId-keyed object).
     // Each = a battle currently being fought by a helper.
     getLockArray(ownerUuid) {

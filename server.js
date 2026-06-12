@@ -249,8 +249,8 @@ app.get('/api/coop/list', (req, res) => {
 // show "en batalla" indicators and avoid two agents on the same battle.
 app.get('/api/coop/locks', (req, res) => {
   const owner = req.query.owner || '';
-  if (!owner) return res.json({ lockedEvents: [] });
-  res.json({ lockedEvents: db.getLockArray(owner) });
+  if (!owner) return res.json({ lockedEvents: [], completedEvents: [] });
+  res.json({ lockedEvents: db.getLockArray(owner), completedEvents: db.getCompletedEvents(owner) });
 });
 
 // GET /api/version
