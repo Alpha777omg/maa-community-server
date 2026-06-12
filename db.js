@@ -337,6 +337,19 @@
       return data.coop[ownerUuid].locks || {};
     },
 
+    // Locks as a JSON-array (Unity JsonUtility can't parse the eventId-keyed object).
+    // Each = a battle currently being fought by a helper.
+    getLockArray(ownerUuid) {
+      if (!data.coop || !data.coop[ownerUuid]) return [];
+      this.cleanStaleLocks();
+      const locks = data.coop[ownerUuid].locks || {};
+      return Object.keys(locks).map((eventId) => ({
+        eventId,
+        playerName: locks[eventId].playerName || 'Agente',
+        lockedAt: locks[eventId].lockedAt || 0
+      }));
+    },
+
     cleanStaleLocks() {
       if (!data.coop) return;
       const now = Math.floor(Date.now() / 1000);

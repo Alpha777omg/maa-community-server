@@ -244,6 +244,15 @@ app.get('/api/coop/list', (req, res) => {
   res.json({ requests: db.getOpenCoopRequests(uuid, limit) });
 });
 
+// GET /api/coop/locks?owner=<uuid>  -> { lockedEvents: [ {eventId, playerName, lockedAt} ] }
+// Battles currently being fought by helpers. Polled by the map (owner + helpers) to
+// show "en batalla" indicators and avoid two agents on the same battle.
+app.get('/api/coop/locks', (req, res) => {
+  const owner = req.query.owner || '';
+  if (!owner) return res.json({ lockedEvents: [] });
+  res.json({ lockedEvents: db.getLockArray(owner) });
+});
+
 // GET /api/version
 app.get('/api/version', (req, res) => {
   try {
