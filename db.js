@@ -323,7 +323,9 @@
       if (!data.coop || !data.coop[ownerUuid]) return false;
       const entry = data.coop[ownerUuid];
       if (!entry.locks) entry.locks = {};
-      if (entry.locks[eventId]) return false;
+      // Allow the SAME helper to re-claim their own lock (e.g. backed out then retried
+      // before the unlock propagated). Only block when someone ELSE holds it.
+      if (entry.locks[eventId] && entry.locks[eventId].lockedBy !== helperUuid) return false;
       const evt = entry.missionData?.events?.find(e => e.eventId === eventId);
       if (!evt || evt.score > 0) return false;
       entry.locks[eventId] = { lockedBy: helperUuid, lockedAt: Math.floor(Date.now() / 1000), playerName: helperName, agentLevel: agentLevel || 0 };
@@ -377,6 +379,7 @@
       const locks = data.coop[ownerUuid].locks || {};
       return Object.keys(locks).map((eventId) => ({
         eventId,
+        lockedBy: locks[eventId].lockedBy || '',
         playerName: locks[eventId].playerName || 'Agente',
         agentLevel: locks[eventId].agentLevel || 0,
         lockedAt: locks[eventId].lockedAt || 0
