@@ -236,6 +236,8 @@ app.post('/api/pvp/sync', (req, res) => {
   res.json(r); });
   app.get('/api/coop/battle-status', (req, res) => { if (!req.query.friend) { return res.json({ locks: {} }); } return
   res.json({ locks: db.getBattleStatus(req.query.friend) }); });
+  // Release every lock I created in an owner's request (called when I return to the map).
+  app.post('/api/coop/clear-my-locks', (req, res) => { const b = req.body; if (!b.owner || !b.uuid) { return res.json({ ok: false }); } db.clearLocksBy(b.owner, b.uuid); return res.json({ ok: true }); });
 
 // GET /api/coop/list?uuid=<me>&limit=30  -> { requests: [ {summary}, ... ] }
 // Public help board: every OTHER agent currently asking for help.

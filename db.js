@@ -386,6 +386,18 @@
       }));
     },
 
+    // Removes every lock in this request created BY a given agent (their lockedBy).
+    // Called when that agent returns to the map (they're no longer in any battle).
+    clearLocksBy(ownerUuid, byUuid) {
+      if (!data.coop || !data.coop[ownerUuid] || !data.coop[ownerUuid].locks) return;
+      const locks = data.coop[ownerUuid].locks;
+      let changed = false;
+      for (const eventId of Object.keys(locks)) {
+        if (locks[eventId].lockedBy === byUuid) { delete locks[eventId]; changed = true; }
+      }
+      if (changed) save(data);
+    },
+
     cleanStaleLocks() {
       if (!data.coop) return;
       const now = Math.floor(Date.now() / 1000);
