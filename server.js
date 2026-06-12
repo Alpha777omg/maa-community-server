@@ -220,6 +220,8 @@ app.post('/api/pvp/sync', (req, res) => {
 // === LAUNCHER UPDATE ENDPOINTS ===
   app.post('/api/coop/share-mission', (req, res) => { const b = req.body; if (!b.uuid || !b.missionData) { return
   res.json({}); } db.shareMission(b.uuid, b.missionData); return res.json({ success: true }); });
+  // Owner re-syncs current progress to an existing request (keeps helper map in sync).
+  app.post('/api/coop/refresh', (req, res) => { const b = req.body; if (!b.uuid || !b.missionData) { return res.json({ updated: false }); } return res.json({ updated: db.refreshMission(b.uuid, b.missionData) }); });
   app.get('/api/coop/get-mission', (req, res) => { const q = req.query; if (!q.uuid || !q.friend) { return res.json({
   missionData: null }); } const c = db.getCoopMission(q.friend); if (!c || !c.missionData) { return res.json({
   missionData: null }); } return res.json({ missionData: c.missionData, locks: c.locks || {} }); });

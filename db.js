@@ -296,6 +296,29 @@
       return data.coop[ownerUuid] || null;
     },
 
+    // Owner re-syncs their current mission state to an EXISTING request (no-op if they
+    // never asked for help). Merges: an event already cleared on the server (by a helper)
+    // is never downgraded back to pending, so helper progress isn't lost in a race.
+    refreshMission(uuid, missionData) {
+      if (!data.coop || !data.coop[uuid]) return false;
+      const existing = data.coop[uuid].missionData;
+      if (existing && Array.isArray(existing.events) && missionData && Array.isArray(missionData.events)) {
+        const serverScore = {};
+        for (const e of existing.events) {
+          if (e && e.eventId) serverScore[e.eventId] = e.score || 0;
+        }
+        for (const e of missionData.events) {
+          if (e && e.eventId && serverScore[e.eventId] > 0 && !(e.score > 0)) {
+            e.score = serverScore[e.eventId];
+          }
+        }
+      }
+      data.coop[uuid].missionData = missionData;
+      data.coop[uuid].lastUpdated = Math.floor(Date.now() / 1000);
+      save(data);
+      return true;
+    },
+
     lockBattle(ownerUuid, eventId, helperUuid, helperName) {
       if (!data.coop || !data.coop[ownerUuid]) return false;
       const entry = data.coop[ownerUuid];
