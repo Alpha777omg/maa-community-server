@@ -319,14 +319,14 @@
       return true;
     },
 
-    lockBattle(ownerUuid, eventId, helperUuid, helperName) {
+    lockBattle(ownerUuid, eventId, helperUuid, helperName, agentLevel) {
       if (!data.coop || !data.coop[ownerUuid]) return false;
       const entry = data.coop[ownerUuid];
       if (!entry.locks) entry.locks = {};
       if (entry.locks[eventId]) return false;
       const evt = entry.missionData?.events?.find(e => e.eventId === eventId);
       if (!evt || evt.score > 0) return false;
-      entry.locks[eventId] = { lockedBy: helperUuid, lockedAt: Math.floor(Date.now() / 1000), playerName: helperName };
+      entry.locks[eventId] = { lockedBy: helperUuid, lockedAt: Math.floor(Date.now() / 1000), playerName: helperName, agentLevel: agentLevel || 0 };
       save(data);
       return true;
     },
@@ -378,6 +378,7 @@
       return Object.keys(locks).map((eventId) => ({
         eventId,
         playerName: locks[eventId].playerName || 'Agente',
+        agentLevel: locks[eventId].agentLevel || 0,
         lockedAt: locks[eventId].lockedAt || 0
       }));
     },

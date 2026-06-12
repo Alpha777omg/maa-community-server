@@ -227,7 +227,7 @@ app.post('/api/pvp/sync', (req, res) => {
   missionData: null }); } return res.json({ missionData: c.missionData, locks: c.locks || {} }); });
   app.post('/api/coop/lock-battle', (req, res) => { const b = req.body; if (!b.uuid || !b.friend || !b.eventId) { return
    res.json({ success: false }); } const p = db.getProfile(b.uuid); const ok = db.lockBattle(b.friend, b.eventId,
-  b.uuid, p ? p.name : 'A'); return res.json({ success: ok }); });
+  b.uuid, p ? p.name : 'A', b.level || 0); return res.json({ success: ok }); });
   app.post('/api/coop/unlock-battle', (req, res) => { const b = req.body; if (!b.uuid || !b.friend || !b.eventId) {
   return res.json({ success: false }); } const ok = db.unlockBattle(b.friend, b.eventId, b.uuid); return res.json({
   success: ok }); });
