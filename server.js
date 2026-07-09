@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
-const { generateWeeklyMissions, getWeekId, contributionMultiplier, applyVillainPush, PUSH_WINDOW_HOURS } = require('./missions');
+const { generateWeeklyMissions, getWeekId, contributionMultiplier, applyVillainPush, PUSH_WINDOW_HOURS, SUB_BONUS } = require('./missions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -85,7 +85,14 @@ app.post('/api/progress', (req, res) => {
   }
 
   for (const c of contributions) {
-    if (c.amount > 0) {
+    if (!(c.amount > 0)) continue;
+    if (typeof c.sub === 'number' && c.sub >= 0) {
+      // Chapter sub-mission: pushes the front by SUB_BONUS when completed.
+      // No personal-contribution credit, but fighting in the chapter counts
+      // as defending the front (slows the villain push).
+      db.addSubProgress(week_id, c.slot, c.sub, c.amount, SUB_BONUS);
+      db.touchFrontActivity(week_id, c.slot, uuid);
+    } else {
       db.addProgress(week_id, c.slot, c.amount);
       db.addContribution(uuid, week_id, c.slot, c.amount);
       db.touchFrontActivity(week_id, c.slot, uuid);   // counts as an active defender

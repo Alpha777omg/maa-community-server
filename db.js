@@ -73,6 +73,23 @@
       }
     },
 
+    // Chapter sub-mission progress; completing one pushes the front by `bonus`.
+    addSubProgress(weekId, slot, sub, amount, bonus) {
+      const missions = data.missions[weekId];
+      if (!missions) return;
+      const m = missions.find(x => x.slot === slot);
+      if (!m || !Array.isArray(m.sub_missions)) return;
+      const s = m.sub_missions.find(x => x.sub === sub);
+      if (!s || s.completed) return;
+      s.current_progress = Math.min(s.target, s.current_progress + amount);
+      if (s.current_progress >= s.target) {
+        s.completed = true;
+        m.current_progress = Math.min(m.target, m.current_progress + bonus);
+        console.log(`[SubMission] ${weekId} slot ${slot} sub ${sub} (${s.display_name}) COMPLETED -> front +${bonus}`);
+      }
+      save(data);
+    },
+
     // ── Battle fronts (global ops v2) ────────────────────────────────────────
     // Records that an agent fought on a front (used to count active defenders).
     touchFrontActivity(weekId, slot, uuid) {

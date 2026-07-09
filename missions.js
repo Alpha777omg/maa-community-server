@@ -37,6 +37,79 @@ function villainPushPct(defenders) {
   return 0;
 }
 
+// ── Chapter sub-missions (classic objectives) ────────────────────────────────
+// Each front carries 3 classic community objectives scoped to ITS CHAPTER
+// (kills, wins, hero usage, statuses done in battles of that chapter). Each
+// completed sub-mission pushes the front's progress by SUB_BONUS points.
+// No own reward and no personal-multiplier credit — pure front support.
+const SUB_BONUS = 20;
+
+const SUB_HEROES = [
+  { name: 'Iron Man', seq: 2 },
+  { name: 'Hawkeye', seq: 4 },
+  { name: 'Captain America', seq: 6 },
+  { name: 'Black Cat', seq: 5 },
+  { name: 'Wolverine', seq: 29 },
+  { name: 'Hulk', seq: 11 },
+  { name: 'Spider-Man', seq: 23 },
+  { name: 'Storm', seq: 25 },
+  { name: 'Cyclops', seq: 8 },
+  { name: 'Black Widow', seq: 3 },
+];
+
+const SUB_STATUSES = [
+  { tag: 'burning', label: 'Aplica quemaduras' },
+  { tag: 'bleeding', label: 'Aplica desangrados' },
+  { tag: 'heal', label: 'Cura aliados' },
+];
+
+const SUB_BUILDERS = {
+  kill_enemies: () => ({
+    type: 'kill_enemies', display_name: 'Elimina enemigos',
+    target: randInt(150, 400),
+  }),
+  win_battles: () => ({
+    type: 'win_battles', display_name: 'Gana batallas',
+    target: randInt(30, 80),
+  }),
+  use_hero: () => {
+    const h = pickRandom(SUB_HEROES);
+    return {
+      type: 'use_hero', display_name: 'Usa a ' + h.name,
+      hero_name: h.name, hero_sequence: h.seq,
+      target: randInt(15, 40),
+    };
+  },
+  apply_status: () => {
+    const s = pickRandom(SUB_STATUSES);
+    return {
+      type: 'apply_status', display_name: s.label,
+      status_tag: s.tag,
+      target: randInt(60, 150),
+    };
+  },
+};
+
+// 3 distinct classic objective types (out of 4) per front.
+function buildSubMissions() {
+  const types = Object.keys(SUB_BUILDERS).sort(() => Math.random() - 0.5).slice(0, 3);
+  return types.map((t, i) => {
+    const s = SUB_BUILDERS[t]();
+    return {
+      sub: i,
+      type: s.type,
+      display_name: s.display_name,
+      description: s.display_name + ' en batallas de este capitulo',
+      target: s.target,
+      current_progress: 0,
+      hero_name: s.hero_name || null,
+      hero_sequence: s.hero_sequence || 0,
+      status_tag: s.status_tag || null,
+      completed: false,
+    };
+  });
+}
+
 // Deeper chapters = harder fronts...
 function frontTarget(chapter) {
   return randInt(100 + chapter * 10, 240 + chapter * 20);
@@ -118,6 +191,7 @@ function generateWeeklyMissions(db) {
       reward_amount: reward.amount,
       defenders: 0,                       // distinct agents active in the last window
       last_push: 0,                       // progress lost at the last villain tick
+      sub_missions: buildSubMissions(),   // 3 classic chapter objectives, +SUB_BONUS each
     };
   });
 
@@ -154,4 +228,5 @@ module.exports = {
   villainPushPct,
   MISSIONS_PER_WEEK,
   PUSH_WINDOW_HOURS,
+  SUB_BONUS,
 };
