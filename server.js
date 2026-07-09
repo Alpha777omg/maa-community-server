@@ -61,8 +61,20 @@ app.get('/api/missions', (req, res) => {
     if (m.mission_type === 'front') m.defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
   }
 
+  // War report: last week's fronts — which were defended and which fell.
+  const prevWeekId = getWeekId(new Date(Date.now() - 7 * 86400000));
+  const report = db.getMissions(prevWeekId).map(p => ({
+    slot: p.slot,
+    display_name: p.display_name,
+    chapter: p.chapter || 0,
+    chapter_name: p.chapter_name || null,
+    villain: p.villain || null,
+    target: p.target,
+    current_progress: p.current_progress,
+  }));
+
   const count = db.countOnline(ONLINE_TIMEOUT);
-  res.json({ week_id: weekId, missions, online_count: count });
+  res.json({ week_id: weekId, missions, online_count: count, report_week: prevWeekId, report });
 });
 
 // POST /api/progress
