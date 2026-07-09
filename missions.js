@@ -1,7 +1,17 @@
-const MISSIONS_PER_WEEK = 3;
+const { S1_CHAPTERS } = require('./catalog');
+
+// ── Battle fronts (Operaciones Globales v2) ──────────────────────────────────
+// Every week the villains attack 12 missions: ONE random mission from EACH
+// Season 1 chapter, so every player has fronts inside chapters they already
+// unlocked. The community fights INSIDE those missions (battles won there = +1);
+// unattended fronts lose ground every PUSH_WINDOW_HOURS (villain counter-attack).
+// Targets and pressure are tuned so completing every front is impossible — the
+// community must decide where to concentrate (and coordinate in global chat).
+const MISSIONS_PER_WEEK = 12;          // one front per S1 chapter
+const PUSH_WINDOW_HOURS = 3;           // villain counter-attack cadence
 
 // ── Personal contribution bonus ──────────────────────────────────────────────
-// The base reward is guaranteed when the community completes the mission, but
+// The base reward is guaranteed when the community completes the front, but
 // each player's claim is multiplied by how much THEY contributed to the target.
 const CONTRIBUTION_TIERS = [
   { minShare: 0.10, multiplier: 3.0 },   // aportaste ≥10% de la meta → x3
@@ -18,50 +28,47 @@ function contributionMultiplier(contributed, target) {
   return 1.0;
 }
 
-const MISSION_POOL = {
-  kill_enemies: [
-    { name: "Eliminacion Global", desc: "La comunidad elimina {target} enemigos", targetRange: [8000, 15000], icon: "a/fs/2x10011.png" },
-    { name: "Caceria Masiva", desc: "La comunidad elimina {target} enemigos", targetRange: [15000, 30000], icon: "a/fs/2x10011.png" },
-    { name: "Purga de Villanos", desc: "La comunidad elimina {target} enemigos", targetRange: [10000, 20000], icon: "a/fs/2x10011.png" },
-    { name: "Exterminio Total", desc: "La comunidad elimina {target} enemigos", targetRange: [20000, 40000], icon: "a/fs/2x10011.png" },
-  ],
-  win_battles: [
-    { name: "Victoria Comunitaria", desc: "La comunidad gana {target} batallas", targetRange: [500, 2000], icon: "a/fs/1mo0011.png" },
-    { name: "Agentes Unidos", desc: "La comunidad gana {target} batallas", targetRange: [1000, 5000], icon: "a/fs/1mo0011.png" },
-    { name: "Frente Unido", desc: "La comunidad gana {target} batallas", targetRange: [800, 3000], icon: "a/fs/91x0003.png" },
-    { name: "Imparables", desc: "La comunidad gana {target} batallas", targetRange: [2000, 8000], icon: "a/fs/91x0003.png" },
-  ],
-  use_hero: [
-    { name: "Tecnologia Stark", desc: "Usa a Iron Man en {target} batallas", targetRange: [200, 1000], icon: "a/fs/gg0011.png", heroName: "Iron Man", heroSequence: 2 },
-    { name: "Ojo de Halcon Global", desc: "Usa a Hawkeye en {target} batallas", targetRange: [200, 1000], icon: "a/fs/2gg0011.png", heroName: "Hawkeye", heroSequence: 4 },
-    { name: "Primer Vengador", desc: "Usa a Capitan America en {target} batallas", targetRange: [200, 1000], icon: "a/fs/3jl0012.png", heroName: "Captain America", heroSequence: 6 },
-    { name: "Mala Suerte Global", desc: "Usa a Black Cat en {target} batallas", targetRange: [200, 1000], icon: "a/fs/3f60011.png", heroName: "Black Cat", heroSequence: 5 },
-    { name: "Arma X Global", desc: "Usa a Wolverine en {target} batallas", targetRange: [200, 1000], icon: "a/fs/2fk0011.png", heroName: "Wolverine", heroSequence: 29 },
-    { name: "Furia Esmeralda", desc: "Usa a Hulk en {target} batallas", targetRange: [200, 1000], icon: "a/fs/wd0011.png", heroName: "Hulk", heroSequence: 11 },
-    { name: "Trepamuros Global", desc: "Usa a Spider-Man en {target} batallas", targetRange: [200, 1000], icon: "a/fs/6d0014.png", heroName: "Spider-Man", heroSequence: 23 },
-    { name: "Tormenta Global", desc: "Usa a Storm en {target} batallas", targetRange: [200, 1000], icon: "a/fs/340011.png", heroName: "Storm", heroSequence: 25 },
-    { name: "Rayo Optico", desc: "Usa a Cyclops en {target} batallas", targetRange: [200, 1000], icon: "a/fs/24o0011.png", heroName: "Cyclops", heroSequence: 8 },
-    { name: "Viuda Negra Global", desc: "Usa a Black Widow en {target} batallas", targetRange: [200, 1000], icon: "a/fs/3mm0012.png", heroName: "Black Widow", heroSequence: 3 },
-  ],
-  apply_status: [
-    { name: "Mundo en Llamas", desc: "La comunidad aplica {target} quemaduras", targetRange: [3000, 8000], icon: "a/fs/97y0003.png", statusTag: "burning" },
-    { name: "Infierno Global", desc: "La comunidad aplica {target} quemaduras", targetRange: [5000, 12000], icon: "a/fs/97y0003.png", statusTag: "burning" },
-    { name: "Sangre Derramada", desc: "La comunidad aplica {target} desangrados", targetRange: [3000, 8000], icon: "a/fs/9270003.png", statusTag: "bleeding" },
-    { name: "Marea Carmesi", desc: "La comunidad aplica {target} desangrados", targetRange: [5000, 12000], icon: "a/fs/9270003.png", statusTag: "bleeding" },
-    { name: "Curacion Masiva", desc: "La comunidad cura {target} veces", targetRange: [2000, 6000], icon: "a/fs/97j0003.png", statusTag: "heal" },
-    { name: "Red de Apoyo", desc: "La comunidad cura {target} veces", targetRange: [4000, 9000], icon: "a/fs/97j0003.png", statusTag: "heal" },
-  ]
-};
+// ── Villain counter-attack ───────────────────────────────────────────────────
+// % of the target lost per window, based on how many distinct agents defended
+// the front during that window. 3+ defenders hold the line.
+function villainPushPct(defenders) {
+  if (defenders <= 0) return 4;
+  if (defenders <= 2) return 2;
+  return 0;
+}
 
-// Rewards reduced 40% from the original ranges.
-const REWARD_TYPES = [
-  { type: "silver", range: [6000, 24000] },
-  { type: "gold",   range: [2, 12] },
-  { type: "sp",     range: [12, 36] },
-  { type: "cp",     range: [6, 18] },
-  { type: "energy", range: [6, 18] },
-  { type: "bp_xp",  range: [120, 600] },
-];
+// Deeper chapters = harder fronts...
+function frontTarget(chapter) {
+  return randInt(50 + chapter * 5, 120 + chapter * 10);
+}
+
+// ...but they guard better loot (veterans have a reason to defend far fronts).
+function frontReward(chapter) {
+  let pool;
+  if (chapter <= 4) {
+    pool = [
+      { type: 'silver', range: [8000, 20000] },
+      { type: 'sp',     range: [15, 30] },
+      { type: 'energy', range: [10, 20] },
+    ];
+  } else if (chapter <= 8) {
+    pool = [
+      { type: 'cp',     range: [10, 20] },
+      { type: 'gold',   range: [8, 15] },
+      { type: 'silver', range: [25000, 50000] },
+      { type: 'bp_xp',  range: [200, 400] },
+    ];
+  } else {
+    pool = [
+      { type: 'gold',  range: [20, 40] },
+      { type: 'cp',    range: [25, 40] },
+      { type: 'bp_xp', range: [400, 800] },
+      { type: 'sp',    range: [150, 300] },
+    ];
+  }
+  const r = pickRandom(pool);
+  return { type: r.type, amount: randInt(r.range[0], r.range[1]) };
+}
 
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -79,28 +86,6 @@ function getWeekId(date = new Date()) {
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
-// Builds one mission object (with a slot) from a pool entry + its category.
-function buildMission(slot, category, mission) {
-  const target = randInt(mission.targetRange[0], mission.targetRange[1]);
-  const reward = pickRandom(REWARD_TYPES);
-  const rewardAmount = randInt(reward.range[0], reward.range[1]);
-  const desc = mission.desc.replace('{target}', target.toLocaleString());
-  return {
-    slot,
-    mission_type: category,
-    display_name: mission.name,
-    description: desc,
-    target,
-    current_progress: 0,
-    hero_name: mission.heroName || null,
-    hero_sequence: mission.heroSequence || 0,
-    status_tag: mission.statusTag || null,
-    icon_asset_id: mission.icon || null,
-    reward_type: reward.type,
-    reward_amount: rewardAmount
-  };
-}
-
 function generateWeeklyMissions(db) {
   const weekId = getWeekId();
   const existing = db.getMissions(weekId);
@@ -109,49 +94,64 @@ function generateWeeklyMissions(db) {
     return existing;
   }
 
-  console.log(`Generating ${MISSIONS_PER_WEEK} missions for ${weekId}...`);
-  const categories = ['kill_enemies', 'win_battles', 'use_hero', 'apply_status'];
-  const chosen = [];                 // { cat, mission }
-  const usedNames = new Set();
-  const usedTags = new Set();        // no two missions share a status tag
-  const usedHeroes = new Set();      // no two missions share a hero
-
-  // A pool entry is usable if its name, hero and status tag aren't already taken.
-  function canUse(m) {
-    if (usedNames.has(m.name)) return false;
-    if (m.statusTag && usedTags.has(m.statusTag)) return false;
-    if (m.heroSequence && usedHeroes.has(m.heroSequence)) return false;
-    return true;
-  }
-  function take(cat, m) {
-    chosen.push({ cat, m });
-    usedNames.add(m.name);
-    if (m.statusTag) usedTags.add(m.statusTag);
-    if (m.heroSequence) usedHeroes.add(m.heroSequence);
-  }
-
-  // 1) Pick MISSIONS_PER_WEEK DISTINCT categories at random, one mission each.
-  const shuffledCats = categories.slice().sort(() => Math.random() - 0.5);
-  shuffledCats.slice(0, MISSIONS_PER_WEEK).forEach(cat => {
-    const options = MISSION_POOL[cat].filter(canUse);
-    if (options.length > 0) take(cat, pickRandom(options));
+  console.log(`Generating ${MISSIONS_PER_WEEK} battle fronts for ${weekId}...`);
+  const missions = S1_CHAPTERS.map((ch, i) => {
+    const m = pickRandom(ch.missions);
+    const target = frontTarget(ch.chapter);
+    const reward = frontReward(ch.chapter);
+    return {
+      slot: i,
+      mission_type: 'front',
+      mission_code: m.code,               // matches the client's missionEvent.missionId
+      chapter: ch.chapter,
+      chapter_name: ch.name,
+      villain: m.villain,
+      display_name: m.name,
+      description: 'Gana batallas dentro de esta mision para hacer retroceder a ' + (m.villain || 'los villanos'),
+      target,
+      current_progress: 0,
+      hero_name: null,
+      hero_sequence: 0,
+      status_tag: null,
+      icon_asset_id: m.image,
+      reward_type: reward.type,
+      reward_amount: reward.amount,
+      defenders: 0,                       // distinct agents active in the last window
+      last_push: 0,                       // progress lost at the last villain tick
+    };
   });
 
-  // 2) Safety fill (should not trigger with 4 categories and 3 slots).
-  const flat = [];
-  categories.forEach(cat => MISSION_POOL[cat].forEach(m => flat.push({ cat, m })));
-  let guard = 0;
-  while (chosen.length < MISSIONS_PER_WEEK && guard < 200) {
-    const pick = pickRandom(flat);
-    if (canUse(pick.m)) take(pick.cat, pick.m);
-    guard++;
-  }
-
-  const missions = chosen.map((entry, slot) => buildMission(slot, entry.cat, entry.m));
-
   db.setMissions(weekId, missions);
-  console.log(`Generated ${missions.length} missions for ${weekId}`);
+  console.log(`Generated ${missions.length} fronts for ${weekId}`);
   return missions;
 }
 
-module.exports = { generateWeeklyMissions, getWeekId, contributionMultiplier, MISSION_POOL, MISSIONS_PER_WEEK };
+// Villain counter-attack tick: fronts with few defenders in the last window
+// lose a % of their target. Completed fronts are safe.
+function applyVillainPush(db) {
+  const weekId = getWeekId();
+  const missions = db.getMissions(weekId);
+  const windowSec = PUSH_WINDOW_HOURS * 3600;
+  for (const m of missions) {
+    if (m.mission_type !== 'front') continue;
+    if (m.current_progress >= m.target) {
+      db.applyFrontPush(weekId, m.slot, db.countRecentDefenders(weekId, m.slot, windowSec), 0);
+      continue;
+    }
+    const defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+    const pct = villainPushPct(defenders);
+    const loss = Math.min(m.current_progress, Math.round(m.target * pct / 100));
+    db.applyFrontPush(weekId, m.slot, defenders, loss);
+    if (loss > 0) console.log(`[VillainPush] ${weekId} slot ${m.slot} (${m.display_name}): -${loss} (${defenders} defenders)`);
+  }
+}
+
+module.exports = {
+  generateWeeklyMissions,
+  getWeekId,
+  contributionMultiplier,
+  applyVillainPush,
+  villainPushPct,
+  MISSIONS_PER_WEEK,
+  PUSH_WINDOW_HOURS,
+};

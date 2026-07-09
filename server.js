@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
-const { generateWeeklyMissions, getWeekId, contributionMultiplier } = require('./missions');
+const { generateWeeklyMissions, getWeekId, contributionMultiplier, applyVillainPush, PUSH_WINDOW_HOURS } = require('./missions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +20,13 @@ generateWeeklyMissions(db);
 cron.schedule('0 0 * * 1', () => {
   console.log('Weekly reset triggered');
   generateWeeklyMissions(db);
+});
+
+// Villain counter-attack: every PUSH_WINDOW_HOURS, fronts with few defenders
+// lose ground (see missions.js villainPushPct).
+cron.schedule(`0 */${PUSH_WINDOW_HOURS} * * *`, () => {
+  console.log('Villain push tick');
+  applyVillainPush(db);
 });
 
 // POST /api/heartbeat
@@ -48,6 +55,12 @@ app.get('/api/missions', (req, res) => {
     missions = db.getMissions(weekId);
   }
 
+  // Live defender counts (fresher than the last villain tick).
+  const windowSec = PUSH_WINDOW_HOURS * 3600;
+  for (const m of missions) {
+    if (m.mission_type === 'front') m.defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+  }
+
   const count = db.countOnline(ONLINE_TIMEOUT);
   res.json({ week_id: weekId, missions, online_count: count });
 });
@@ -63,6 +76,7 @@ app.post('/api/progress', (req, res) => {
     if (c.amount > 0) {
       db.addProgress(week_id, c.slot, c.amount);
       db.addContribution(uuid, week_id, c.slot, c.amount);
+      db.touchFrontActivity(week_id, c.slot, uuid);   // counts as an active defender
     }
   }
 

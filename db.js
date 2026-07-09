@@ -73,6 +73,38 @@
       }
     },
 
+    // ── Battle fronts (global ops v2) ────────────────────────────────────────
+    // Records that an agent fought on a front (used to count active defenders).
+    touchFrontActivity(weekId, slot, uuid) {
+      if (!data.frontActivity) data.frontActivity = {};
+      const key = weekId + ':' + slot;
+      if (!data.frontActivity[key]) data.frontActivity[key] = {};
+      data.frontActivity[key][uuid] = Math.floor(Date.now() / 1000);
+      save(data);
+    },
+
+    // Distinct agents that fought on a front within the last windowSec.
+    countRecentDefenders(weekId, slot, windowSec) {
+      const key = weekId + ':' + slot;
+      const act = (data.frontActivity && data.frontActivity[key]) || {};
+      const cutoff = Math.floor(Date.now() / 1000) - windowSec;
+      let n = 0;
+      for (const ts of Object.values(act)) if (ts >= cutoff) n++;
+      return n;
+    },
+
+    // Villain counter-attack tick: subtract progress and record the tick state.
+    applyFrontPush(weekId, slot, defenders, loss) {
+      const missions = data.missions[weekId];
+      if (!missions) return;
+      const m = missions.find(x => x.slot === slot);
+      if (!m) return;
+      m.defenders = defenders;
+      m.last_push = loss;
+      if (loss > 0) m.current_progress = Math.max(0, m.current_progress - loss);
+      save(data);
+    },
+
     getContributions(uuid, weekId) {
       const key = uuid + ':' + weekId;
       return data.contributions[key] || {};
