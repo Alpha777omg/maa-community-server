@@ -45,38 +45,40 @@ function villainPushPct(defenders) {
 const SUB_BONUS = 20;
 
 const SUB_HEROES = [
-  { name: 'Iron Man', seq: 2 },
-  { name: 'Hawkeye', seq: 4 },
-  { name: 'Captain America', seq: 6 },
-  { name: 'Black Cat', seq: 5 },
-  { name: 'Wolverine', seq: 29 },
-  { name: 'Hulk', seq: 11 },
-  { name: 'Spider-Man', seq: 23 },
-  { name: 'Storm', seq: 25 },
-  { name: 'Cyclops', seq: 8 },
-  { name: 'Black Widow', seq: 3 },
+  { name: 'Iron Man', seq: 2, icon: 'a/fs/gg0011.png' },
+  { name: 'Hawkeye', seq: 4, icon: 'a/fs/2gg0011.png' },
+  { name: 'Captain America', seq: 6, icon: 'a/fs/3jl0012.png' },
+  { name: 'Black Cat', seq: 5, icon: 'a/fs/3f60011.png' },
+  { name: 'Wolverine', seq: 29, icon: 'a/fs/2fk0011.png' },
+  { name: 'Hulk', seq: 11, icon: 'a/fs/wd0011.png' },
+  { name: 'Spider-Man', seq: 23, icon: 'a/fs/6d0014.png' },
+  { name: 'Storm', seq: 25, icon: 'a/fs/340011.png' },
+  { name: 'Cyclops', seq: 8, icon: 'a/fs/24o0011.png' },
+  { name: 'Black Widow', seq: 3, icon: 'a/fs/3mm0012.png' },
 ];
 
 const SUB_STATUSES = [
-  { tag: 'burning', label: 'Aplica quemaduras' },
-  { tag: 'bleeding', label: 'Aplica desangrados' },
-  { tag: 'heal', label: 'Cura aliados' },
+  { tag: 'burning', label: 'Aplica quemaduras', icon: 'a/fs/97y0003.png' },
+  { tag: 'bleeding', label: 'Aplica desangrados', icon: 'a/fs/9270003.png' },
+  { tag: 'heal', label: 'Cura aliados', icon: 'a/fs/97j0003.png' },
 ];
 
 const SUB_BUILDERS = {
   kill_enemies: () => ({
     type: 'kill_enemies', display_name: 'Elimina enemigos',
+    icon: 'a/fs/2x10011.png',
     target: randInt(150, 400),
   }),
   win_battles: () => ({
     type: 'win_battles', display_name: 'Gana batallas',
+    icon: 'a/fs/91x0003.png',
     target: randInt(30, 80),
   }),
   use_hero: () => {
     const h = pickRandom(SUB_HEROES);
     return {
       type: 'use_hero', display_name: 'Usa a ' + h.name,
-      hero_name: h.name, hero_sequence: h.seq,
+      hero_name: h.name, hero_sequence: h.seq, icon: h.icon,
       target: randInt(15, 40),
     };
   },
@@ -84,7 +86,7 @@ const SUB_BUILDERS = {
     const s = pickRandom(SUB_STATUSES);
     return {
       type: 'apply_status', display_name: s.label,
-      status_tag: s.tag,
+      status_tag: s.tag, icon: s.icon,
       target: randInt(60, 150),
     };
   },
@@ -105,6 +107,7 @@ function buildSubMissions() {
       hero_name: s.hero_name || null,
       hero_sequence: s.hero_sequence || 0,
       status_tag: s.status_tag || null,
+      icon_asset_id: s.icon || null,
       completed: false,
     };
   });
