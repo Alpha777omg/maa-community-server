@@ -46,7 +46,7 @@ function villainPushPct(defenders, wins) {
 // (kills, wins, hero usage, statuses done in battles of that chapter). Each
 // completed sub-mission pushes the front's progress by SUB_BONUS points.
 // No own reward and no personal-multiplier credit — pure front support.
-const SUB_BONUS = 20;
+const SUB_BONUS = 100;
 
 // Every hero here is recruitable from the start of the game (has a CP cost and
 // a verified portrait); Black Widow is the free starter.
