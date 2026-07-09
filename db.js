@@ -119,14 +119,39 @@
       return n;
     },
 
+    // Victories won ON the front's mission, bucketed by hour (defense = effort).
+    addFrontWins(weekId, slot, amount) {
+      if (!data.frontWins) data.frontWins = {};
+      const key = weekId + ':' + slot;
+      if (!data.frontWins[key]) data.frontWins[key] = {};
+      const hour = Math.floor(Date.now() / 3600000);
+      data.frontWins[key][hour] = (data.frontWins[key][hour] || 0) + amount;
+      for (const h of Object.keys(data.frontWins[key])) {
+        if (hour - Number(h) > 24) delete data.frontWins[key][h];   // prune old buckets
+      }
+      save(data);
+    },
+
+    countRecentWins(weekId, slot, windowSec) {
+      const key = weekId + ':' + slot;
+      const buckets = (data.frontWins && data.frontWins[key]) || {};
+      const cutoffHour = Math.floor((Date.now() - windowSec * 1000) / 3600000);
+      let n = 0;
+      for (const [h, amt] of Object.entries(buckets)) {
+        if (Number(h) >= cutoffHour) n += amt;
+      }
+      return n;
+    },
+
     // Villain counter-attack tick: subtract progress and record the tick state.
     // Tracks the losing streak (consecutive ticks with loss) for chat alarms.
-    applyFrontPush(weekId, slot, defenders, loss) {
+    applyFrontPush(weekId, slot, defenders, loss, wins) {
       const missions = data.missions[weekId];
       if (!missions) return null;
       const m = missions.find(x => x.slot === slot);
       if (!m) return null;
       m.defenders = defenders;
+      m.recent_wins = wins || 0;
       m.last_push = loss;
       if (loss > 0) {
         m.current_progress = Math.max(0, m.current_progress - loss);

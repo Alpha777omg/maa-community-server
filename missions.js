@@ -29,12 +29,16 @@ function contributionMultiplier(contributed, target) {
 }
 
 // ── Villain counter-attack ───────────────────────────────────────────────────
-// % of the target lost per window, based on how many distinct agents defended
-// the front during that window. 3+ defenders hold the line.
-function villainPushPct(defenders) {
-  if (defenders <= 0) return 4;
-  if (defenders <= 2) return 2;
-  return 0;
+// Defense is measured by EFFORT: victories won on the front's mission during
+// the window, with a headcount fallback so a coordinated group also holds.
+// Tuned for a community of ~20-30 concurrent / ~100 daily agents.
+const HOLD_WINS  = 25, HOLD_AGENTS  = 6;   // full hold: no ground lost
+const LIGHT_WINS = 10, LIGHT_AGENTS = 3;   // solid defense: -1%
+function villainPushPct(defenders, wins) {
+  if (wins >= HOLD_WINS || defenders >= HOLD_AGENTS) return 0;
+  if (wins >= LIGHT_WINS || defenders >= LIGHT_AGENTS) return 1;
+  if (wins >= 1 || defenders >= 1) return 2;
+  return 4;
 }
 
 // ── Chapter sub-missions (classic objectives) ────────────────────────────────
@@ -193,6 +197,7 @@ function generateWeeklyMissions(db) {
       reward_type: reward.type,
       reward_amount: reward.amount,
       defenders: 0,                       // distinct agents active in the last window
+      recent_wins: 0,                     // victories on the front's mission in the window
       last_push: 0,                       // progress lost at the last villain tick
       push_streak: 0,                     // consecutive losing ticks (for chat alarms)
       alert_low_sent: false,              // "below 25%" alarm fired (once per week)
@@ -217,20 +222,21 @@ function applyVillainPush(db) {
   for (const m of missions) {
     if (m.mission_type !== 'front') continue;
     const defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+    const wins = db.countRecentWins(weekId, m.slot, windowSec);
 
     const fortified = m.fortified ||
       (Array.isArray(m.sub_missions) && m.sub_missions.length > 0 && m.sub_missions.every(s => s.completed));
     if (m.current_progress >= m.target || fortified) {
-      db.applyFrontPush(weekId, m.slot, defenders, 0);
+      db.applyFrontPush(weekId, m.slot, defenders, 0, wins);
       continue;
     }
 
     const before = m.current_progress;
-    const pct = villainPushPct(defenders);
+    const pct = villainPushPct(defenders, wins);
     const loss = Math.min(before, Math.round(m.target * pct / 100));
-    const state = db.applyFrontPush(weekId, m.slot, defenders, loss);
+    const state = db.applyFrontPush(weekId, m.slot, defenders, loss, wins);
     if (!state || loss <= 0) continue;
-    console.log(`[VillainPush] ${weekId} slot ${m.slot} (${m.display_name}): -${loss} (${defenders} defenders, streak ${state.streak})`);
+    console.log(`[VillainPush] ${weekId} slot ${m.slot} (${m.display_name}): -${loss} (${wins} wins, ${defenders} defenders, streak ${state.streak})`);
 
     // ── S.H.I.E.L.D. alarms to global chat ──
     const vname = m.villain || 'El enemigo';

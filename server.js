@@ -55,10 +55,13 @@ app.get('/api/missions', (req, res) => {
     missions = db.getMissions(weekId);
   }
 
-  // Live defender counts (fresher than the last villain tick).
+  // Live defense counts (fresher than the last villain tick).
   const windowSec = PUSH_WINDOW_HOURS * 3600;
   for (const m of missions) {
-    if (m.mission_type === 'front') m.defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+    if (m.mission_type === 'front') {
+      m.defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+      m.recent_wins = db.countRecentWins(weekId, m.slot, windowSec);
+    }
   }
 
   // War report: last week's fronts — which were defended and which fell.
@@ -101,6 +104,7 @@ app.post('/api/progress', (req, res) => {
       db.addProgress(week_id, c.slot, c.amount);
       db.addContribution(uuid, week_id, c.slot, c.amount);
       db.touchFrontActivity(week_id, c.slot, uuid);   // counts as an active defender
+      db.addFrontWins(week_id, c.slot, c.amount);     // effort-based defense
     }
   }
 
