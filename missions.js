@@ -161,7 +161,7 @@ const SUB_BUILDERS = {
   damage_total: () => ({
     type: 'damage_total', display_name: 'Causa dano a los enemigos',
     icon: 'a/fs/1mo0011.png',
-    target: randInt(40000, 120000),
+    target: randInt(120000, 360000),
   }),
   // Damage dealt while the full team is one class.
   damage_class: () => {
@@ -169,7 +169,7 @@ const SUB_BUILDERS = {
     return {
       type: 'damage_class', display_name: 'Causa dano con equipo ' + c.label,
       class_tag: c.tag, icon: 'classes/' + c.tag + '.png',
-      target: randInt(25000, 70000),
+      target: randInt(75000, 210000),
     };
   },
   // Damage dealt in battles where this hero is on the team.
@@ -178,7 +178,7 @@ const SUB_BUILDERS = {
     return {
       type: 'damage_hero', display_name: 'Causa dano llevando a ' + h.name,
       hero_name: h.name, hero_sequence: h.seq, icon: h.icon,
-      target: randInt(15000, 50000),
+      target: randInt(45000, 150000),
     };
   },
 };
