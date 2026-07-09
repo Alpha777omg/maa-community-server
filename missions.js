@@ -1,4 +1,22 @@
-const MISSIONS_PER_WEEK = 6;
+const MISSIONS_PER_WEEK = 3;
+
+// ── Personal contribution bonus ──────────────────────────────────────────────
+// The base reward is guaranteed when the community completes the mission, but
+// each player's claim is multiplied by how much THEY contributed to the target.
+const CONTRIBUTION_TIERS = [
+  { minShare: 0.10, multiplier: 3.0 },   // aportaste ≥10% de la meta → x3
+  { minShare: 0.05, multiplier: 2.0 },   // ≥5% → x2
+  { minShare: 0.01, multiplier: 1.5 },   // ≥1% → x1.5
+];
+
+function contributionMultiplier(contributed, target) {
+  if (!target || target <= 0 || !contributed || contributed <= 0) return 1.0;
+  const share = contributed / target;
+  for (const t of CONTRIBUTION_TIERS) {
+    if (share >= t.minShare) return t.multiplier;
+  }
+  return 1.0;
+}
 
 const MISSION_POOL = {
   kill_enemies: [
@@ -112,13 +130,14 @@ function generateWeeklyMissions(db) {
     if (m.heroSequence) usedHeroes.add(m.heroSequence);
   }
 
-  // 1) Guarantee one mission from every category (respecting the no-repeat rules).
-  categories.forEach(cat => {
+  // 1) Pick MISSIONS_PER_WEEK DISTINCT categories at random, one mission each.
+  const shuffledCats = categories.slice().sort(() => Math.random() - 0.5);
+  shuffledCats.slice(0, MISSIONS_PER_WEEK).forEach(cat => {
     const options = MISSION_POOL[cat].filter(canUse);
     if (options.length > 0) take(cat, pickRandom(options));
   });
 
-  // 2) Fill the rest with random DISTINCT missions from any category.
+  // 2) Safety fill (should not trigger with 4 categories and 3 slots).
   const flat = [];
   categories.forEach(cat => MISSION_POOL[cat].forEach(m => flat.push({ cat, m })));
   let guard = 0;
@@ -135,4 +154,4 @@ function generateWeeklyMissions(db) {
   return missions;
 }
 
-module.exports = { generateWeeklyMissions, getWeekId, MISSION_POOL, MISSIONS_PER_WEEK };
+module.exports = { generateWeeklyMissions, getWeekId, contributionMultiplier, MISSION_POOL, MISSIONS_PER_WEEK };

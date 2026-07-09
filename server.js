@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
-const { generateWeeklyMissions, getWeekId } = require('./missions');
+const { generateWeeklyMissions, getWeekId, contributionMultiplier } = require('./missions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -88,7 +88,21 @@ app.post('/api/claim', (req, res) => {
   const claimed = db.claimSlot(uuid, week_id, slot);
   if (!claimed) return res.status(400).json({ error: 'already claimed' });
 
-  res.json({ success: true, reward_type: mission.reward_type, reward_amount: mission.reward_amount });
+  // Personal contribution bonus: base reward is guaranteed; the claim is
+  // multiplied by how much this player contributed to the global target.
+  const contribs = db.getContributions(uuid, week_id);
+  const contributed = (contribs[slot] && contribs[slot].contributed) || 0;
+  const multiplier = contributionMultiplier(contributed, mission.target);
+  const finalAmount = Math.round(mission.reward_amount * multiplier);
+
+  res.json({
+    success: true,
+    reward_type: mission.reward_type,
+    reward_amount: finalAmount,
+    base_amount: mission.reward_amount,
+    multiplier,
+    contributed
+  });
 });
 
 // GET /api/status
@@ -109,14 +123,14 @@ app.get('/api/status', (req, res) => {
 
 // POST /api/chat/send
 app.post('/api/chat/send', (req, res) => {
-  const { uuid, playerName, message } = req.body;
+  const { uuid, playerName, message, agentLevel } = req.body;
   if (!uuid || !message) return res.status(400).json({ error: 'uuid, message required' });
 
   const name = (playerName || 'Agent').substring(0, 30);
   const clean = message.replace(/[<>]/g, '').trim();
   if (clean.length === 0) return res.status(400).json({ error: 'empty message' });
 
-  const msg = db.addChatMessage(uuid, name, clean);
+  const msg = db.addChatMessage(uuid, name, clean, agentLevel);
   res.json({ success: true, message: msg });
 });
 
@@ -143,6 +157,22 @@ app.get('/api/profile/search', (req, res) => {
   if (!name) return res.status(400).json({ error: 'name required' });
   const results = db.searchProfiles(name);
   res.json({ results });
+});
+
+// POST /api/profile/stats — publish my public stats so others can view my profile
+app.post('/api/profile/stats', (req, res) => {
+  const { uuid, name, stats } = req.body;
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  const profile = db.updateProfileStats(uuid, name, stats || {});
+  res.json({ success: true, profile });
+});
+
+// GET /api/profile/get — fetch another player's public profile by uuid
+app.get('/api/profile/get', (req, res) => {
+  const { uuid } = req.query;
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  const profile = db.getProfile(uuid);
+  res.json({ profile });
 });
 
 // POST /api/friends/add
