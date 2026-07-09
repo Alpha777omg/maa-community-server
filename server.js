@@ -90,7 +90,12 @@ app.post('/api/progress', (req, res) => {
       // Chapter sub-mission: pushes the front by SUB_BONUS when completed.
       // No personal-contribution credit, but fighting in the chapter counts
       // as defending the front (slows the villain push).
-      db.addSubProgress(week_id, c.slot, c.sub, c.amount, SUB_BONUS);
+      const r = db.addSubProgress(week_id, c.slot, c.sub, c.amount, SUB_BONUS);
+      if (r && r.fortified) {
+        db.addChatMessage('system', 'S.H.I.E.L.D.',
+          'FRENTE FORTIFICADO: "' + r.name + '" (Cap. ' + r.chapter +
+          ') completo sus 3 objetivos. El villano ya no puede recuperar terreno alli.', 0);
+      }
       db.touchFrontActivity(week_id, c.slot, uuid);
     } else {
       db.addProgress(week_id, c.slot, c.amount);

@@ -194,6 +194,9 @@ function generateWeeklyMissions(db) {
       reward_amount: reward.amount,
       defenders: 0,                       // distinct agents active in the last window
       last_push: 0,                       // progress lost at the last villain tick
+      push_streak: 0,                     // consecutive losing ticks (for chat alarms)
+      alert_low_sent: false,              // "below 25%" alarm fired (once per week)
+      fortified: false,                   // all 3 sub-missions done -> immune to the push
       sub_missions: buildSubMissions(),   // 3 classic chapter objectives, +SUB_BONUS each
     };
   });
@@ -204,22 +207,46 @@ function generateWeeklyMissions(db) {
 }
 
 // Villain counter-attack tick: fronts with few defenders in the last window
-// lose a % of their target. Completed fronts are safe.
+// lose a % of their target. Completed and FORTIFIED (all 3 sub-missions done)
+// fronts are safe. Posts S.H.I.E.L.D. alarms to global chat when a front is
+// bleeding out (3 losing ticks in a row, or crossing below 25%).
 function applyVillainPush(db) {
   const weekId = getWeekId();
   const missions = db.getMissions(weekId);
   const windowSec = PUSH_WINDOW_HOURS * 3600;
   for (const m of missions) {
     if (m.mission_type !== 'front') continue;
-    if (m.current_progress >= m.target) {
-      db.applyFrontPush(weekId, m.slot, db.countRecentDefenders(weekId, m.slot, windowSec), 0);
+    const defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+
+    const fortified = m.fortified ||
+      (Array.isArray(m.sub_missions) && m.sub_missions.length > 0 && m.sub_missions.every(s => s.completed));
+    if (m.current_progress >= m.target || fortified) {
+      db.applyFrontPush(weekId, m.slot, defenders, 0);
       continue;
     }
-    const defenders = db.countRecentDefenders(weekId, m.slot, windowSec);
+
+    const before = m.current_progress;
     const pct = villainPushPct(defenders);
-    const loss = Math.min(m.current_progress, Math.round(m.target * pct / 100));
-    db.applyFrontPush(weekId, m.slot, defenders, loss);
-    if (loss > 0) console.log(`[VillainPush] ${weekId} slot ${m.slot} (${m.display_name}): -${loss} (${defenders} defenders)`);
+    const loss = Math.min(before, Math.round(m.target * pct / 100));
+    const state = db.applyFrontPush(weekId, m.slot, defenders, loss);
+    if (!state || loss <= 0) continue;
+    console.log(`[VillainPush] ${weekId} slot ${m.slot} (${m.display_name}): -${loss} (${defenders} defenders, streak ${state.streak})`);
+
+    // ── S.H.I.E.L.D. alarms to global chat ──
+    const vname = m.villain || 'El enemigo';
+    const pctLeft = m.target > 0 ? Math.floor(state.progress / m.target * 100) : 0;
+    if (state.streak === 3) {
+      db.addChatMessage('system', 'S.H.I.E.L.D.',
+        'ALERTA: ' + vname + ' lleva 9h recuperando terreno en "' + m.display_name +
+        '" (Cap. ' + m.chapter + '). Frente al ' + pctLeft + '%. Necesita defensores!', 0);
+    }
+    const low = Math.round(m.target * 0.25);
+    if (!m.alert_low_sent && before >= low && state.progress < low) {
+      db.markFrontLowAlert(weekId, m.slot);
+      db.addChatMessage('system', 'S.H.I.E.L.D.',
+        'ALERTA CRITICA: "' + m.display_name + '" (Cap. ' + m.chapter +
+        ') ha caido por debajo del 25%. ' + vname + ' esta a punto de reconquistar el frente!', 0);
+    }
   }
 }
 

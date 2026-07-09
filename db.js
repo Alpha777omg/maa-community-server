@@ -74,20 +74,29 @@
     },
 
     // Chapter sub-mission progress; completing one pushes the front by `bonus`.
+    // Completing ALL of them FORTIFIES the front (immune to the villain push).
+    // Returns { fortified, name, chapter } when the last sub-mission completes.
     addSubProgress(weekId, slot, sub, amount, bonus) {
       const missions = data.missions[weekId];
-      if (!missions) return;
+      if (!missions) return null;
       const m = missions.find(x => x.slot === slot);
-      if (!m || !Array.isArray(m.sub_missions)) return;
+      if (!m || !Array.isArray(m.sub_missions)) return null;
       const s = m.sub_missions.find(x => x.sub === sub);
-      if (!s || s.completed) return;
+      if (!s || s.completed) return null;
       s.current_progress = Math.min(s.target, s.current_progress + amount);
+      let result = null;
       if (s.current_progress >= s.target) {
         s.completed = true;
         m.current_progress = Math.min(m.target, m.current_progress + bonus);
         console.log(`[SubMission] ${weekId} slot ${slot} sub ${sub} (${s.display_name}) COMPLETED -> front +${bonus}`);
+        if (m.sub_missions.every(x => x.completed) && !m.fortified) {
+          m.fortified = true;
+          console.log(`[SubMission] ${weekId} slot ${slot} (${m.display_name}) FORTIFIED`);
+          result = { fortified: true, name: m.display_name, chapter: m.chapter || 0 };
+        }
       }
       save(data);
+      return result;
     },
 
     // ── Battle fronts (global ops v2) ────────────────────────────────────────
@@ -111,15 +120,30 @@
     },
 
     // Villain counter-attack tick: subtract progress and record the tick state.
+    // Tracks the losing streak (consecutive ticks with loss) for chat alarms.
     applyFrontPush(weekId, slot, defenders, loss) {
+      const missions = data.missions[weekId];
+      if (!missions) return null;
+      const m = missions.find(x => x.slot === slot);
+      if (!m) return null;
+      m.defenders = defenders;
+      m.last_push = loss;
+      if (loss > 0) {
+        m.current_progress = Math.max(0, m.current_progress - loss);
+        m.push_streak = (m.push_streak || 0) + 1;
+      } else {
+        m.push_streak = 0;
+      }
+      save(data);
+      return { progress: m.current_progress, streak: m.push_streak };
+    },
+
+    // One-shot "front below 25%" alarm flag (one alert per front per week).
+    markFrontLowAlert(weekId, slot) {
       const missions = data.missions[weekId];
       if (!missions) return;
       const m = missions.find(x => x.slot === slot);
-      if (!m) return;
-      m.defenders = defenders;
-      m.last_push = loss;
-      if (loss > 0) m.current_progress = Math.max(0, m.current_progress - loss);
-      save(data);
+      if (m) { m.alert_low_sent = true; save(data); }
     },
 
     getContributions(uuid, weekId) {
