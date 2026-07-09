@@ -48,23 +48,78 @@ function villainPushPct(defenders, wins) {
 // No own reward and no personal-multiplier credit — pure front support.
 const SUB_BONUS = 20;
 
+// Every hero here is recruitable from the start of the game (has a CP cost and
+// a verified portrait); Black Widow is the free starter.
 const SUB_HEROES = [
   { name: 'Iron Man', seq: 2, icon: 'a/fs/gg0011.png' },
-  { name: 'Hawkeye', seq: 4, icon: 'a/fs/2gg0011.png' },
-  { name: 'Captain America', seq: 6, icon: 'a/fs/3jl0012.png' },
-  { name: 'Black Cat', seq: 5, icon: 'a/fs/3f60011.png' },
-  { name: 'Wolverine', seq: 29, icon: 'a/fs/2fk0011.png' },
-  { name: 'Hulk', seq: 11, icon: 'a/fs/wd0011.png' },
-  { name: 'Spider-Man', seq: 23, icon: 'a/fs/6d0014.png' },
-  { name: 'Storm', seq: 25, icon: 'a/fs/340011.png' },
-  { name: 'Cyclops', seq: 8, icon: 'a/fs/24o0011.png' },
   { name: 'Black Widow', seq: 3, icon: 'a/fs/3mm0012.png' },
+  { name: 'Hawkeye', seq: 4, icon: 'a/fs/2gg0011.png' },
+  { name: 'Black Cat', seq: 5, icon: 'a/fs/3f60011.png' },
+  { name: 'Captain America', seq: 6, icon: 'a/fs/3jl0012.png' },
+  { name: 'Colossus', seq: 7, icon: 'a/fs/2ze0011.png' },
+  { name: 'Cyclops', seq: 8, icon: 'a/fs/24o0011.png' },
+  { name: 'Daredevil', seq: 9, icon: 'a/fs/1yb0011.png' },
+  { name: 'Dr. Strange', seq: 10, icon: 'a/fs/3gr0011.png' },
+  { name: 'Hulk', seq: 11, icon: 'a/fs/wd0011.png' },
+  { name: 'Human Torch', seq: 12, icon: 'a/fs/2vm0012.png' },
+  { name: 'Invisible Woman', seq: 13, icon: 'a/fs/mt0011.png' },
+  { name: 'Iron Fist', seq: 14, icon: 'a/fs/1pj0011.png' },
+  { name: 'Kitty Pryde', seq: 15, icon: 'a/fs/az0011.png' },
+  { name: 'Luke Cage', seq: 16, icon: 'a/fs/3mt0011.png' },
+  { name: 'Mr. Fantastic', seq: 17, icon: 'a/fs/35t0011.png' },
+  { name: 'Ms. Marvel', seq: 18, icon: 'a/fs/2nv0012.png' },
+  { name: 'Nightcrawler', seq: 19, icon: 'a/fs/480011.png' },
+  { name: 'Phoenix', seq: 20, icon: 'a/fs/3bd0011.png' },
+  { name: 'She-Hulk', seq: 21, icon: 'a/fs/3430011.png' },
+  { name: 'Sif', seq: 22, icon: 'a/fs/1vy0011.png' },
+  { name: 'Spider-Man', seq: 23, icon: 'a/fs/6d0014.png' },
+  { name: 'Spider-Woman', seq: 24, icon: 'a/fs/3240011.png' },
+  { name: 'Storm', seq: 25, icon: 'a/fs/340011.png' },
+  { name: 'Thing', seq: 26, icon: 'a/fs/rh0011.png' },
+  { name: 'Thor', seq: 27, icon: 'a/fs/2uu0011.png' },
+  { name: 'War Machine', seq: 28, icon: 'a/fs/3dd0011.png' },
+  { name: 'Wolverine', seq: 29, icon: 'a/fs/2fk0011.png' },
+  { name: 'Black Panther', seq: 31, icon: 'a/fs/4sr0010.png' },
+  { name: 'Scarlet Witch', seq: 32, icon: 'a/fs/4vy0010.png' },
+  { name: 'Rogue', seq: 35, icon: 'a/fs/56h0008.png' },
+  { name: 'Gambit', seq: 36, icon: 'a/fs/5b80008.png' },
+  { name: 'Quicksilver', seq: 38, icon: 'a/fs/5gy0008.png' },
+  { name: 'Hercules', seq: 40, icon: 'a/fs/5nb0008.png' },
+  { name: 'Beast', seq: 42, icon: 'a/fs/5sj0007.png' },
+  { name: 'Tigra', seq: 45, icon: 'a/fs/5yd0007.png' },
+  { name: 'Wasp', seq: 51, icon: 'a/fs/6jo0006.png' },
+  { name: 'Captain Britain', seq: 52, icon: 'a/fs/6m50006.png' },
+  { name: 'Black Knight', seq: 55, icon: 'a/fs/6sw0006.png' },
+  { name: 'Union Jack', seq: 59, icon: 'a/fs/70o0006.png' },
+  { name: 'Thundra', seq: 63, icon: 'a/fs/79f0006.png' },
+  { name: 'Black Bolt', seq: 73, icon: 'a/fs/8d50006.png' },
+  { name: 'Moon Knight', seq: 76, icon: 'a/fs/8pv0006.png' },
+  { name: 'Doctor Voodoo', seq: 79, icon: 'a/fs/8y50006.png' },
+  { name: 'Sunfire', seq: 86, icon: 'a/fs/9k30006.png' },
+  { name: 'Medusa', seq: 103, icon: 'a/fs/b8k0003.png' },
 ];
 
+// Icons verified against the daily-missions defs (same status tags the client
+// already reports from StatusAddToken).
 const SUB_STATUSES = [
   { tag: 'burning', label: 'Aplica quemaduras', icon: 'a/fs/97y0003.png' },
   { tag: 'bleeding', label: 'Aplica desangrados', icon: 'a/fs/9270003.png' },
   { tag: 'heal', label: 'Cura aliados', icon: 'a/fs/97j0003.png' },
+  { tag: 'stun', label: 'Aturde enemigos', icon: 'a/fs/9280003.png' },
+  { tag: 'poison', label: 'Envenena enemigos', icon: 'a/fs/99w0002.png' },
+  { tag: 'blind', label: 'Ciega enemigos', icon: 'a/fs/92f0006.png' },
+  { tag: 'weakened', label: 'Debilita enemigos', icon: 'a/fs/92a0004.png' },
+  { tag: 'exposed', label: 'Expone enemigos', icon: 'a/fs/92e0002.png' },
+  { tag: 'slowed', label: 'Ralentiza enemigos', icon: 'a/fs/92d0003.png' },
+];
+
+const SUB_CLASSES = [
+  { tag: 'blaster', label: 'Blaster' },
+  { tag: 'bruiser', label: 'Bruiser' },
+  { tag: 'scrapper', label: 'Scrapper' },
+  { tag: 'infiltrator', label: 'Infiltrator' },
+  { tag: 'tactician', label: 'Tactician' },
+  { tag: 'generalist', label: 'Generalist' },
 ];
 
 const SUB_BUILDERS = {
@@ -94,6 +149,38 @@ const SUB_BUILDERS = {
       target: randInt(60, 150),
     };
   },
+  // Win with a full team (agent included) of one class.
+  win_class: () => {
+    const c = pickRandom(SUB_CLASSES);
+    return {
+      type: 'win_class', display_name: 'Gana batallas con equipo ' + c.label,
+      class_tag: c.tag, icon: 'classes/' + c.tag + '.png',
+      target: randInt(10, 25),
+    };
+  },
+  damage_total: () => ({
+    type: 'damage_total', display_name: 'Causa dano a los enemigos',
+    icon: 'a/fs/1mo0011.png',
+    target: randInt(40000, 120000),
+  }),
+  // Damage dealt while the full team is one class.
+  damage_class: () => {
+    const c = pickRandom(SUB_CLASSES);
+    return {
+      type: 'damage_class', display_name: 'Causa dano con equipo ' + c.label,
+      class_tag: c.tag, icon: 'classes/' + c.tag + '.png',
+      target: randInt(25000, 70000),
+    };
+  },
+  // Damage dealt in battles where this hero is on the team.
+  damage_hero: () => {
+    const h = pickRandom(SUB_HEROES);
+    return {
+      type: 'damage_hero', display_name: 'Causa dano llevando a ' + h.name,
+      hero_name: h.name, hero_sequence: h.seq, icon: h.icon,
+      target: randInt(15000, 50000),
+    };
+  },
 };
 
 // 3 distinct classic objective types (out of 4) per front.
@@ -111,6 +198,7 @@ function buildSubMissions() {
       hero_name: s.hero_name || null,
       hero_sequence: s.hero_sequence || 0,
       status_tag: s.status_tag || null,
+      class_tag: s.class_tag || null,
       icon_asset_id: s.icon || null,
       completed: false,
     };
