@@ -101,13 +101,14 @@
       return data.contributions[key]?.[slot]?.claimed || false;
     },
 
-    addChatMessage(uuid, playerName, message) {
+    addChatMessage(uuid, playerName, message, agentLevel) {
       if (!data.chat) data.chat = [];
       const msg = {
         id: Date.now(),
         uuid,
         playerName,
         message: message.substring(0, 200),
+        agentLevel: parseInt(agentLevel) || 0,
         timestamp: Math.floor(Date.now() / 1000)
       };
       data.chat.push(msg);
@@ -161,6 +162,23 @@
         }
       }
       return results.slice(0, 20);
+    },
+
+    // Public profile stats (shared so other players can view a profile)
+    updateProfileStats(uuid, name, stats) {
+      if (!data.profiles) data.profiles = {};
+      let p = data.profiles[uuid];
+      if (!p) {
+        let tag;
+        const existing = new Set(Object.values(data.profiles).map(x => x.tag));
+        do { tag = String(Math.floor(1000 + Math.random() * 9000)); } while (existing.has(tag));
+        p = data.profiles[uuid] = { name: (name || 'Agent').substring(0, 30), tag, lastSeen: Math.floor(Date.now() / 1000) };
+      }
+      if (name) p.name = name.substring(0, 30);
+      p.stats = stats || {};
+      p.lastSeen = Math.floor(Date.now() / 1000);
+      save(data);
+      return p;
     },
 
     addFriendRequest(fromUuid, toUuid) {
@@ -302,7 +320,13 @@
     refreshMission(uuid, missionData) {
       if (!data.coop || !data.coop[uuid]) return false;
       const existing = data.coop[uuid].missionData;
-      if (existing && Array.isArray(existing.events) && missionData && Array.isArray(missionData.events)) {
+      // If the incoming publish has at least one cleared battle, the owner is mid-run, so we
+      // merge (never downgrade a battle a helper just finished). But if EVERY incoming event
+      // is pending, the owner has restarted the mission fresh — discard the previous run's
+      // completions instead of resurrecting them.
+      const ownerProgressed = missionData && Array.isArray(missionData.events) &&
+        missionData.events.some((e) => e && e.score > 0);
+      if (ownerProgressed && existing && Array.isArray(existing.events) && missionData && Array.isArray(missionData.events)) {
         const serverScore = {};
         for (const e of existing.events) {
           if (e && e.eventId) serverScore[e.eventId] = e.score || 0;
