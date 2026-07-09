@@ -48,8 +48,9 @@ function villainPushPct(defenders, wins) {
 // No own reward and no personal-multiplier credit — pure front support.
 const SUB_BONUS = 100;
 
-// Every hero here is recruitable from the start of the game (has a CP cost and
-// a verified portrait); Black Widow is the free starter.
+// Only heroes obtainable from the very start (verified against the recruit
+// locks in items.xml): CP cost present and NO item-collection / recruit-first
+// lock. Iron Man and Black Widow are the tutorial starters everyone owns.
 const SUB_HEROES = [
   { name: 'Iron Man', seq: 2, icon: 'a/fs/gg0011.png' },
   { name: 'Black Widow', seq: 3, icon: 'a/fs/3mm0012.png' },
@@ -79,24 +80,6 @@ const SUB_HEROES = [
   { name: 'Thor', seq: 27, icon: 'a/fs/2uu0011.png' },
   { name: 'War Machine', seq: 28, icon: 'a/fs/3dd0011.png' },
   { name: 'Wolverine', seq: 29, icon: 'a/fs/2fk0011.png' },
-  { name: 'Black Panther', seq: 31, icon: 'a/fs/4sr0010.png' },
-  { name: 'Scarlet Witch', seq: 32, icon: 'a/fs/4vy0010.png' },
-  { name: 'Rogue', seq: 35, icon: 'a/fs/56h0008.png' },
-  { name: 'Gambit', seq: 36, icon: 'a/fs/5b80008.png' },
-  { name: 'Quicksilver', seq: 38, icon: 'a/fs/5gy0008.png' },
-  { name: 'Hercules', seq: 40, icon: 'a/fs/5nb0008.png' },
-  { name: 'Beast', seq: 42, icon: 'a/fs/5sj0007.png' },
-  { name: 'Tigra', seq: 45, icon: 'a/fs/5yd0007.png' },
-  { name: 'Wasp', seq: 51, icon: 'a/fs/6jo0006.png' },
-  { name: 'Captain Britain', seq: 52, icon: 'a/fs/6m50006.png' },
-  { name: 'Black Knight', seq: 55, icon: 'a/fs/6sw0006.png' },
-  { name: 'Union Jack', seq: 59, icon: 'a/fs/70o0006.png' },
-  { name: 'Thundra', seq: 63, icon: 'a/fs/79f0006.png' },
-  { name: 'Black Bolt', seq: 73, icon: 'a/fs/8d50006.png' },
-  { name: 'Moon Knight', seq: 76, icon: 'a/fs/8pv0006.png' },
-  { name: 'Doctor Voodoo', seq: 79, icon: 'a/fs/8y50006.png' },
-  { name: 'Sunfire', seq: 86, icon: 'a/fs/9k30006.png' },
-  { name: 'Medusa', seq: 103, icon: 'a/fs/b8k0003.png' },
 ];
 
 // Icons verified against the daily-missions defs (same status tags the client
