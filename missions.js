@@ -206,8 +206,9 @@ function buildSubMissions() {
 }
 
 // Deeper chapters = harder fronts...
+// (wins are worth 1 point; mini-bosses 2; bosses 3 — see client TrackFrontWin)
 function frontTarget(chapter) {
-  return randInt(200 + chapter * 20, 480 + chapter * 40);
+  return randInt(400 + chapter * 40, 960 + chapter * 80);
 }
 
 // ...but they guard better loot (veterans have a reason to defend far fronts).
@@ -215,23 +216,23 @@ function frontReward(chapter) {
   let pool;
   if (chapter <= 4) {
     pool = [
-      { type: 'silver', range: [4000, 10000] },
-      { type: 'sp',     range: [8, 15] },
-      { type: 'energy', range: [5, 10] },
+      { type: 'silver', range: [8000, 20000] },
+      { type: 'sp',     range: [16, 30] },
+      { type: 'energy', range: [10, 20] },
     ];
   } else if (chapter <= 8) {
     pool = [
-      { type: 'cp',     range: [5, 10] },
-      { type: 'gold',   range: [4, 8] },
-      { type: 'silver', range: [12500, 25000] },
-      { type: 'bp_xp',  range: [100, 200] },
+      { type: 'cp',     range: [10, 20] },
+      { type: 'gold',   range: [8, 16] },
+      { type: 'silver', range: [25000, 50000] },
+      { type: 'bp_xp',  range: [200, 400] },
     ];
   } else {
     pool = [
-      { type: 'gold',  range: [10, 20] },
-      { type: 'cp',    range: [13, 20] },
-      { type: 'bp_xp', range: [200, 400] },
-      { type: 'sp',    range: [75, 150] },
+      { type: 'gold',  range: [20, 40] },
+      { type: 'cp',    range: [26, 40] },
+      { type: 'bp_xp', range: [400, 800] },
+      { type: 'sp',    range: [150, 300] },
     ];
   }
   const r = pickRandom(pool);
