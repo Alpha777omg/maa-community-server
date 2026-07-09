@@ -14,7 +14,7 @@ const PUSH_WINDOW_HOURS = 3;           // villain counter-attack cadence
 // The base reward is guaranteed when the community completes the front, but
 // each player's claim is multiplied by how much THEY contributed to the target.
 const CONTRIBUTION_TIERS = [
-  { minShare: 0.10, multiplier: 3.0 },   // aportaste ≥10% de la meta → x3
+  { minShare: 0.12, multiplier: 2.5 },   // aportaste ≥12% de la meta → x2.5 (máximo)
   { minShare: 0.05, multiplier: 2.0 },   // ≥5% → x2
   { minShare: 0.01, multiplier: 1.5 },   // ≥1% → x1.5
 ];
