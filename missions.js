@@ -207,7 +207,7 @@ function buildSubMissions() {
 
 // Deeper chapters = harder fronts...
 function frontTarget(chapter) {
-  return randInt(100 + chapter * 10, 240 + chapter * 20);
+  return randInt(200 + chapter * 20, 480 + chapter * 40);
 }
 
 // ...but they guard better loot (veterans have a reason to defend far fronts).
