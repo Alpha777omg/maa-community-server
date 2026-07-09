@@ -39,7 +39,7 @@ function villainPushPct(defenders) {
 
 // Deeper chapters = harder fronts...
 function frontTarget(chapter) {
-  return randInt(50 + chapter * 5, 120 + chapter * 10);
+  return randInt(100 + chapter * 10, 240 + chapter * 20);
 }
 
 // ...but they guard better loot (veterans have a reason to defend far fronts).
@@ -47,23 +47,23 @@ function frontReward(chapter) {
   let pool;
   if (chapter <= 4) {
     pool = [
-      { type: 'silver', range: [8000, 20000] },
-      { type: 'sp',     range: [15, 30] },
-      { type: 'energy', range: [10, 20] },
+      { type: 'silver', range: [4000, 10000] },
+      { type: 'sp',     range: [8, 15] },
+      { type: 'energy', range: [5, 10] },
     ];
   } else if (chapter <= 8) {
     pool = [
-      { type: 'cp',     range: [10, 20] },
-      { type: 'gold',   range: [8, 15] },
-      { type: 'silver', range: [25000, 50000] },
-      { type: 'bp_xp',  range: [200, 400] },
+      { type: 'cp',     range: [5, 10] },
+      { type: 'gold',   range: [4, 8] },
+      { type: 'silver', range: [12500, 25000] },
+      { type: 'bp_xp',  range: [100, 200] },
     ];
   } else {
     pool = [
-      { type: 'gold',  range: [20, 40] },
-      { type: 'cp',    range: [25, 40] },
-      { type: 'bp_xp', range: [400, 800] },
-      { type: 'sp',    range: [150, 300] },
+      { type: 'gold',  range: [10, 20] },
+      { type: 'cp',    range: [13, 20] },
+      { type: 'bp_xp', range: [200, 400] },
+      { type: 'sp',    range: [75, 150] },
     ];
   }
   const r = pickRandom(pool);
