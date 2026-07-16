@@ -136,12 +136,16 @@ app.post('/api/claim', (req, res) => {
   const contributed = (contribs[slot] && contribs[slot].contributed) || 0;
   const multiplier = contributionMultiplier(contributed, mission.target);
   const finalAmount = Math.round(mission.reward_amount * multiplier);
+  // Second reward (double-reward update); empty for legacy weeks without one.
+  const finalAmount2 = mission.reward2_type ? Math.round((mission.reward2_amount || 0) * multiplier) : 0;
 
   res.json({
     success: true,
     reward_type: mission.reward_type,
     reward_amount: finalAmount,
     base_amount: mission.reward_amount,
+    reward2_type: mission.reward2_type || '',
+    reward2_amount: finalAmount2,
     multiplier,
     contributed
   });

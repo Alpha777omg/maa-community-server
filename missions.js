@@ -222,6 +222,15 @@ function frontReward(chapter) {
   return { type: r.type, amount: randInt(r.range[0], r.range[1]) };
 }
 
+// Every front pays DOUBLE: two rewards from its chapter pool, always of
+// different types so it reads as a real bundle (e.g. gold + CP).
+function frontRewards(chapter) {
+  const r1 = frontReward(chapter);
+  let r2 = frontReward(chapter);
+  for (let i = 0; i < 8 && r2.type === r1.type; i++) r2 = frontReward(chapter);
+  return [r1, r2];
+}
+
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -242,6 +251,22 @@ function generateWeeklyMissions(db) {
   const weekId = getWeekId();
   const existing = db.getMissions(weekId);
   if (existing.length >= MISSIONS_PER_WEEK) {
+    // Backfill: fronts generated before the double-reward update get their
+    // second reward on the fly (runs once; setMissions persists it).
+    let patched = false;
+    for (const m of existing) {
+      if (m.mission_type === 'front' && !m.reward2_type) {
+        let r2 = frontReward(m.chapter);
+        for (let i = 0; i < 8 && r2.type === m.reward_type; i++) r2 = frontReward(m.chapter);
+        m.reward2_type = r2.type;
+        m.reward2_amount = r2.amount;
+        patched = true;
+      }
+    }
+    if (patched) {
+      db.setMissions(weekId, existing);
+      console.log(`Backfilled second rewards for ${weekId}`);
+    }
     console.log(`Missions for ${weekId} already exist (${existing.length} missions)`);
     return existing;
   }
@@ -250,7 +275,7 @@ function generateWeeklyMissions(db) {
   const missions = S1_CHAPTERS.map((ch, i) => {
     const m = pickRandom(ch.missions);
     const target = frontTarget(ch.chapter);
-    const reward = frontReward(ch.chapter);
+    const [reward, reward2] = frontRewards(ch.chapter);
     return {
       slot: i,
       mission_type: 'front',
@@ -268,6 +293,8 @@ function generateWeeklyMissions(db) {
       icon_asset_id: m.image,
       reward_type: reward.type,
       reward_amount: reward.amount,
+      reward2_type: reward2.type,
+      reward2_amount: reward2.amount,
       defenders: 0,                       // distinct agents active in the last window
       recent_wins: 0,                     // victories on the front's mission in the window
       last_push: 0,                       // progress lost at the last villain tick
