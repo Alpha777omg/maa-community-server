@@ -615,5 +615,39 @@
         const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
       }
       return pool.slice(0, limit).map(e => e.team);
+    },
+
+    // === Jotun Siege world boss (event-scoped; independent of community missions) ===
+    // Each client reports its CUMULATIVE damage total (from its own save), so the
+    // server is disposable: if the disk wipes, the pool rebuilds as players re-report.
+    // Math.max makes reports idempotent (a re-send can never double-count).
+    worldbossReport(eventId, uuid, name, totalDamage) {
+      if (!data.worldboss) data.worldboss = {};
+      const ev = data.worldboss[eventId] = data.worldboss[eventId] || { players: {} };
+      const p = ev.players[uuid] = ev.players[uuid] || { name: 'Agent', damage: 0, updated: 0 };
+      if (name) p.name = String(name).substring(0, 30);
+      const dmg = Math.floor(Number(totalDamage) || 0);
+      p.damage = Math.min(Math.max(p.damage, dmg), 100000000);
+      p.updated = Math.floor(Date.now() / 1000);
+      save(data);
+    },
+
+    worldbossStatus(eventId, uuid, maxHp) {
+      if (!data.worldboss) data.worldboss = {};
+      const ev = data.worldboss[eventId] || { players: {} };
+      const entries = Object.entries(ev.players).map(([id, p]) => ({ id, name: p.name, damage: p.damage }));
+      entries.sort((a, b) => b.damage - a.damage);
+      let total = 0;
+      for (const e of entries) total += e.damage;
+      const hp = Math.max(0, maxHp - total);
+      return {
+        max_hp: maxHp,
+        hp,
+        defeated: hp <= 0,
+        players_count: entries.length,
+        player_damage: uuid && ev.players[uuid] ? ev.players[uuid].damage : 0,
+        player_rank: uuid ? (entries.findIndex(e => e.id === uuid) + 1) : 0,
+        top: entries.slice(0, 5).map(e => ({ name: e.name, damage: e.damage }))
+      };
     }
   };

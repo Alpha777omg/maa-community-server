@@ -333,6 +333,26 @@ app.get('/api/coop/locks', (req, res) => {
   res.json({ lockedEvents: db.getLockArray(owner), completedEvents: db.getCompletedEvents(owner) });
 });
 
+// ── Jotun Siege world boss (event raid; NOT part of community missions) ──
+// The whole community shares one boss HP pool. Clients report their cumulative
+// damage; HP = MAX - sum of all reports. Tune via env without redeploying data.
+const WORLDBOSS_MAX_HP = parseInt(process.env.WORLDBOSS_MAX_HP || '3000000', 10);
+
+// POST /api/worldboss/report  { uuid, name, eventId, totalDamage }
+app.post('/api/worldboss/report', (req, res) => {
+  const { uuid, name, eventId, totalDamage } = req.body;
+  if (!uuid || !eventId) return res.status(400).json({ error: 'uuid and eventId required' });
+  db.worldbossReport(eventId, uuid, name, totalDamage);
+  res.json(db.worldbossStatus(eventId, uuid, WORLDBOSS_MAX_HP));
+});
+
+// GET /api/worldboss/status?event_id=...&uuid=...
+app.get('/api/worldboss/status', (req, res) => {
+  const eventId = req.query.event_id;
+  if (!eventId) return res.status(400).json({ error: 'event_id required' });
+  res.json(db.worldbossStatus(eventId, req.query.uuid || '', WORLDBOSS_MAX_HP));
+});
+
 // GET /api/version
 app.get('/api/version', (req, res) => {
   try {
